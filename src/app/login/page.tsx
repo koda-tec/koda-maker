@@ -28,7 +28,7 @@ export default function LoginPage() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) alert(error.message)
-    else router.push("/") // Al entrar lo mandamos al inicio
+    else router.push("/") // Al entrar lo mandamos al inicio --
     setLoading(false)
   }
 
