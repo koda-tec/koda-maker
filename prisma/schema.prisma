@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --- MODELO DE USUARIO (SaaS Ready) ---
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  createdAt     DateTime  @default(now())
+  
+  // Relaciones
+  materials     Material[]
+  templates     ProductTemplate[]
+  orders        Order[]
+}
+
+// --- MATERIALES ---
+
+model Material {
+  id           String   @id @default(cuid())
+  name         String
+  type         String   // Láser, 3D, Insumo, etc.
+  unit         String   // gr, m, unidad, min
+  unitPrice    Float    // Costo de compra por unidad
+  stock        Float    @default(0)
+  minStock     Float    @default(0)
+  
+  // Relación con Usuario
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  
+  // Relación con Plantillas
+  templates    TemplateMaterial[]
+}
+
+// --- PLANTILLAS DE PRODUCTOS (Recetas) ---
+
+model ProductTemplate {
+  id             String   @id @default(cuid())
+  name           String
+  category       String
+  basePrice      Float    // Precio sugerido de venta
+  machineTimeMin Int      // Tiempo estimado de uso de máquina
+  
+  // Relación con Usuario
+  userId         String
+  user         User     @relation(fields: [userId], references: [id])
+  
+  // Relaciones
+  materials      TemplateMaterial[]
+  orderItems     OrderItem[]
+}
+
+// Relación muchos a muchos: Materiales usados en una plantilla
+model TemplateMaterial {
+  id         String          @id @default(cuid())
+  quantity   Float           // Cantidad que consume de este material
+  
+  template   ProductTemplate @relation(fields: [templateId], references: [id])
+  templateId String
+  material   Material        @relation(fields: [materialId], references: [id])
+  materialId String
+}
+
+// --- PEDIDOS ---
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    Int         @unique @default(autoincrement())
+  customerName   String
+  status         OrderStatus @default(PRESUPUESTADO)
+  createdAt      DateTime    @default(now())
+  deliveryDate   DateTime?
+  totalCost      Float       @default(0)
+  totalPrice     Float       @default(0)
+  fileUrl        String?     // Link a logo/diseño en Supabase Storage
+  notes          String?
+  
+  // Relación con Usuario
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  
+  // Relaciones
+  items          OrderItem[]
+  payments       Payment[]   
+}
+
+// Items específicos dentro de un pedido
+model OrderItem {
+  id           String          @id @default(cuid())
+  quantity     Int
+  customPrice  Float           // Precio final pactado por unidad
+  
+  order        Order           @relation(fields: [orderId], references: [id])
+  orderId      String
+  template     ProductTemplate @relation(fields: [templateId], references: [id])
+  templateId   String
+}
+
+// Registro de pagos (Señas / Pagos totales)
+model Payment {
+  id        String   @id @default(cuid())
+  amount    Float
+  date      DateTime @default(now())
+  method    String   // Efectivo, Transferencia, etc.
+  
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+}
+
+enum OrderStatus {
+  PRESUPUESTADO
+  CONFIRMADO
+  EN_PROCESO
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
