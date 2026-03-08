@@ -1,15 +1,46 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
-      <h1 className="text-4xl font-bold text-[#000000]">SyG Creaciones</h1>
-      <p className="mt-4 text-gray-600">Bienvenido al sistema de gestión</p>
-      
-      <div className="mt-10 grid grid-cols-1 gap-4 w-full max-w-sm">
-        <div className="p-6 border rounded-xl bg-card shadow-sm">
-          <h2 className="font-semibold">Resumen de Hoy</h2>
-          <p className="text-sm text-gray-500">No hay pedidos pendientes para hoy.</p>
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Hero Section */}
+      <main className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-8">
+        <div className="w-24 h-24 bg-black rounded-3xl flex items-center justify-center shadow-2xl rotate-3">
+          <span className="text-white text-4xl font-black italic">K</span>
         </div>
-      </div>
-    </main>
+        
+        <div className="space-y-4 max-w-md">
+          <h1 className="text-5xl font-black text-black leading-none uppercase tracking-tighter">
+            Maker <br />
+            <span className="text-[#f13d4b]">Control</span>
+          </h1>
+          <p className="text-gray-600 font-medium">
+            El sistema de gestión para emprendedores de grabado láser e impresión 3D.
+          </p>
+        </div>
+
+        <div className="flex flex-col w-full max-w-xs gap-4 pt-8">
+          <Link 
+            href="/login" 
+            className="w-full p-4 bg-black text-white rounded-2xl font-bold text-lg shadow-xl active:scale-95 transition-all text-center"
+          >
+            Comenzar ahora
+          </Link>
+          <Link 
+            href="/login" 
+            className="w-full p-4 bg-white text-black border-2 border-black rounded-2xl font-bold text-lg active:scale-95 transition-all text-center"
+          >
+            Iniciar Sesión
+          </Link>
+        </div>
+      </main>
+
+      {/* Footer / Branding */}
+      <footer className="p-8 text-center">
+        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+          Power by KODA Tech
+        </p>
+      </footer>
+    </div>
   );
 }
