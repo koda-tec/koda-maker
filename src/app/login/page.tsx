@@ -1,78 +1,118 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from 'react'
 
-export default function LoginPage() {
-  const [isRegistering, setIsRegistering] = useState(false)
+function LoginContent() {
+  const searchParams = useSearchParams()
+  const mode = searchParams.get('mode')
+  
+  const [isRegistering, setIsRegistering] = useState(mode === 'register')
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [name, setName] = useState("") // Nuevo estado para el nombre
+  const [businessName, setBusinessName] = useState("") // Antes "name"
   const [loading, setLoading] = useState(false)
   
   const supabase = createClient()
   const router = useRouter()
 
+  useEffect(() => {
+    setIsRegistering(mode === 'register')
+  }, [mode])
+
   const handleAuth = async () => {
+    if (!email || !password || (isRegistering && !businessName)) {
+      alert("Por favor completa todos los campos.")
+      return
+    }
+
     setLoading(true)
     if (isRegistering) {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name } }
+        options: { 
+          data: { full_name: businessName } // Se guarda como Nombre de Emprendimiento
+        }
       })
       if (error) alert(error.message)
-      else alert("¡Revisa tu email para confirmar tu cuenta!")
+      else alert("¡Cuenta creada! Revisa tu email para confirmar.")
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) alert(error.message)
-      else router.push("/")
+      else router.push("/dashboard") // Redirigimos al futuro Dashboard
     }
     setLoading(false)
   }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-black tracking-tighter text-black">KODA MAKER</h1>
-          <p className="text-gray-500 text-sm">Gestiona tu taller de forma profesional.</p>
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center">
+          <div className="inline-block p-4 bg-black rounded-3xl mb-4">
+             <span className="text-white font-black text-2xl">K</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-tighter">
+            {isRegistering ? "CREAR CUENTA" : "BIENVENIDO"}
+          </h1>
+          <p className="text-gray-400 text-sm font-medium">KODA MAKER SYSTEM</p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {isRegistering && (
-            <input 
-              type="text" placeholder="Nombre completo" 
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all"
-              onChange={(e) => setName(e.target.value)}
-            />
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase ml-2 text-gray-400">Nombre de tu Emprendimiento</label>
+              <input 
+                type="text" placeholder="Ej: SyG Creaciones" 
+                className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all font-medium"
+                onChange={(e) => setBusinessName(e.target.value)}
+              />
+            </div>
           )}
-          <input 
-            type="email" placeholder="Email" 
-            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all"
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input 
-            type="password" placeholder="Contraseña" 
-            className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all"
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase ml-2 text-gray-400">Email Profesional</label>
+            <input 
+              type="email" placeholder="email@ejemplo.com" 
+              className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all font-medium"
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase ml-2 text-gray-400">Contraseña</label>
+            <input 
+              type="password" placeholder="••••••••" 
+              className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all font-medium"
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
           
           <button 
             onClick={handleAuth} disabled={loading}
-            className="w-full p-4 bg-black text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-transform disabled:opacity-50"
+            className="w-full p-5 bg-black text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-all disabled:opacity-50 mt-4"
           >
-            {loading ? "Procesando..." : isRegistering ? "Crear cuenta" : "Entrar"}
+            {loading ? "CONECTANDO..." : isRegistering ? "REGISTRARME" : "INGRESAR"}
           </button>
         </div>
 
         <button 
           onClick={() => setIsRegistering(!isRegistering)}
-          className="w-full text-center text-sm text-gray-500 hover:text-[#f13d4b] transition-colors"
+          className="w-full text-center text-xs font-bold text-gray-400 hover:text-black transition-colors"
         >
-          {isRegistering ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate gratis"}
+          {isRegistering ? "¿YA TIENES CUENTA? INICIA SESIÓN" : "¿ERES NUEVO? CREA UNA CUENTA GRATIS"}
         </button>
       </div>
     </div>
+  )
+}
+
+// Next.js requiere Suspense para usar useSearchParams en componentes cliente
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <LoginContent />
+    </Suspense>
   )
 }
