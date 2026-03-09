@@ -84,6 +84,7 @@ model Order {
   totalCost      Float       @default(0)
   totalPrice     Float       @default(0)
   designDetails  String?     // Nuevo: Qué se graba/imprime
+  fileUrl        String?     // <--- Asegurate que diga exactamente así
   notes          String?
   userId         String
   user           User        @relation(fields: [userId], references: [id])
