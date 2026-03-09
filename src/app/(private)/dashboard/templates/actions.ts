@@ -25,3 +25,19 @@ export async function createTemplate(formData: FormData) {
 
   revalidatePath("/dashboard/templates")
 }
+export async function deleteTemplate(id: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("No autorizado")
+
+  // Primero borramos las relaciones de materiales si existieran
+  await prisma.templateMaterial.deleteMany({
+    where: { templateId: id }
+  })
+
+  await prisma.productTemplate.delete({
+    where: { id, userId: user.id }
+  })
+
+  revalidatePath("/dashboard/templates")
+}

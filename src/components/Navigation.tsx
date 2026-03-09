@@ -1,12 +1,13 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, Settings } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, BarChart3, Settings, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const menuItems = [
   { name: "Inicio", href: "/dashboard", icon: LayoutDashboard },
   { name: "Pedidos", href: "/dashboard/pedidos", icon: ShoppingCart },
+  { name: "Plantillas", href: "/dashboard/templates", icon: BookOpen }, 
   { name: "Stock", href: "/dashboard/stock", icon: Package },
   { name: "Reportes", href: "/dashboard/reportes", icon: BarChart3 },
 ]

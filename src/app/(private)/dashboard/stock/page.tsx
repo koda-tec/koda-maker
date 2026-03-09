@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma"
 import { createClient } from "@/lib/supabase-server"
-import { Plus, AlertTriangle, Package } from "lucide-react"
-import { addMaterial } from "./actions"
+import { Plus, AlertTriangle, Package, Trash2, Pencil } from "lucide-react"
+import { addMaterial, deleteMaterial } from "./actions"
 
 export default async function StockPage() {
   const supabase = await createClient()
@@ -63,6 +63,14 @@ export default async function StockPage() {
         {materiales.map((m) => (
           <div key={m.id} className="bg-white p-5 rounded-[28px] border border-gray-100 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-4">
+                <form action={async () => {
+                    "use server"
+                    await deleteMaterial(m.id)
+                }}>
+                    <button className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                        <Trash2 size={18} />
+                    </button>
+                </form>
               <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400">
                 <Package size={20} />
               </div>

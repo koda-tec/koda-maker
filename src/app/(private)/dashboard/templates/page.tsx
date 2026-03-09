@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma"
 import { createClient } from "@/lib/supabase-server"
-import { Plus, Ruler, Clock, Tag } from "lucide-react"
-import { createTemplate } from "./actions"
+import { Plus, Ruler, Clock, Tag, Trash2  } from "lucide-react"
+import { createTemplate, deleteTemplate  } from "./actions"
 
 export default async function TemplatesPage() {
   const supabase = await createClient()
@@ -51,14 +51,23 @@ export default async function TemplatesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {templates.map((t) => (
           <div key={t.id} className="bg-white p-6 rounded-32px border border-gray-100 shadow-sm space-y-4 hover:border-[#f13d4b] transition-colors group">
-            <div className="flex justify-between items-start">
-              <div>
+           <div className="flex justify-between items-start">
+            <div>
                 <span className="text-[10px] font-black uppercase text-[#f13d4b] bg-red-50 px-2 py-1 rounded-full">{t.category}</span>
                 <h4 className="text-xl font-black text-black mt-1 uppercase tracking-tighter">{t.name}</h4>
-              </div>
-              <Tag size={20} className="text-gray-300 group-hover:text-[#f13d4b]" />
             </div>
-
+            <div className="flex gap-2">
+                <form action={async () => {
+                    "use server"
+                    await deleteTemplate(t.id)
+                }}>
+                    <button className="p-2 text-gray-200 hover:text-red-500 transition-colors">
+                        <Trash2 size={20} />
+                    </button>
+                </form>
+                <Tag size={20} className="text-gray-300" />
+            </div>
+            </div>
             <div className="grid grid-cols-2 gap-2 pt-2">
               <div className="flex items-center gap-2 text-gray-500">
                 <Clock size={14} />
