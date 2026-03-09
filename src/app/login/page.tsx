@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense } from 'react'
+import { toast } from "sonner"
 
 function LoginContent() {
   const searchParams = useSearchParams()
@@ -21,30 +22,38 @@ function LoginContent() {
     setIsRegistering(mode === 'register')
   }, [mode])
 
-  const handleAuth = async () => {
-    if (!email || !password || (isRegistering && !businessName)) {
-      alert("Por favor completa todos los campos.")
-      return
-    }
-
-    setLoading(true)
-    if (isRegistering) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { 
-          data: { full_name: businessName } // Se guarda como Nombre de Emprendimiento
-        }
-      })
-      if (error) alert(error.message)
-      else alert("¡Cuenta creada! Revisa tu email para confirmar.")
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) alert(error.message)
-      else router.push("/dashboard") // Redirigimos al futuro Dashboard
-    }
-    setLoading(false)
+const handleAuth = async () => {
+  if (!email || !password || (isRegistering && !businessName)) {
+    toast.error("Faltan datos", { description: "Por favor completa todos los campos." })
+    return
   }
+
+  setLoading(true)
+  if (isRegistering) {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: businessName } }
+    })
+    if (error) {
+      toast.error("Error al registrar", { description: error.message })
+    } else {
+      toast.success("¡Registro exitoso!", { 
+        description: "Revisa tu email para confirmar tu cuenta y empezar a usar KODA Maker.",
+        duration: 6000 
+      })
+    }
+  } else {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      toast.error("Error de acceso", { description: "Email o contraseña incorrectos." })
+    } else {
+      toast.success("¡Bienvenido de nuevo!")
+      router.push("/dashboard")
+    }
+  }
+  setLoading(false)
+}
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6">

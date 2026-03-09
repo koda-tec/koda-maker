@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: "SyG Creaciones",
@@ -28,7 +29,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster position="top-center" richColors /> {/* Toaster aquí */}
+      </body>
     </html>
   );
 }
