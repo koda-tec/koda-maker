@@ -17,7 +17,7 @@ export async function createTemplate(formData: FormData) {
   const category = formData.get("category") as string
   const basePrice = parseFloat(formData.get("basePrice") as string) || 0
   const targetMargin = parseFloat(formData.get("targetMargin") as string) || 50 // Por defecto 50%
-  const machineTimeMin = parseInt(formData.get("machineTimeMin") as string) || 0
+  const machineTimeMin = 0
 
   await prisma.productTemplate.create({
     data: {

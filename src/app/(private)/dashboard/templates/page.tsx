@@ -39,7 +39,6 @@ export default async function TemplatesPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <input name="basePrice" type="number" step="0.01" placeholder="Precio Sugerido ($)" className="p-4 bg-gray-50 rounded-2xl outline-none" required />
-            <input name="machineTimeMin" type="number" placeholder="Tiempo Máquina (min)" className="p-4 bg-gray-50 rounded-2xl outline-none" required />
           </div>
 
           <button type="submit" className="md:col-span-2 p-4 bg-[#f13d4b] text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all">
