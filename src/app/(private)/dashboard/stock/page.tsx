@@ -34,6 +34,8 @@ export default async function StockPage() {
             <option value="Láser">Corte/Grabado Láser</option>
             <option value="3D">Impresión 3D</option>
             <option value="Insumo">Insumo/Producto Base</option>
+            <option value="Máquina">Máquina (Tiempo/Uso)</option> 
+
           </select>
 
           <div className="grid grid-cols-2 gap-4">
