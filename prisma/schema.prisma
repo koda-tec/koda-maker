@@ -47,7 +47,8 @@ model ProductTemplate {
   id             String   @id @default(cuid())
   name           String
   category       String
-  basePrice      Float    // Precio sugerido de venta
+  basePrice      Float    // Este será el "Precio Final" que ellos elijan
+  targetMargin   Float    @default(50) // Porcentaje de ganancia deseado (ej: 50%)
   machineTimeMin Int      // Tiempo estimado de uso de máquina
   
   // Relación con Usuario
