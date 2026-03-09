@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { createClient } from "@/lib/supabase-server"
 import { Plus, Ruler, Clock, Tag, Trash2  } from "lucide-react"
 import { createTemplate, deleteTemplate  } from "./actions"
+import Link from "next/link";
 
 export default async function TemplatesPage() {
   const supabase = await createClient()
@@ -81,9 +82,12 @@ export default async function TemplatesPage() {
 
             <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
               <span className="text-2xl font-black text-black">${t.basePrice}</span>
-              <button className="text-[10px] font-black uppercase bg-black text-white px-4 py-2 rounded-xl">
-                Configurar Receta
-              </button>
+                <Link 
+                    href={`/dashboard/templates/${t.id}`}
+                    className="text-[10px] font-black uppercase bg-black text-white px-4 py-2 rounded-xl active:scale-95 transition-all"
+                >
+                    Configurar Receta
+                </Link>
             </div>
           </div>
         ))}
