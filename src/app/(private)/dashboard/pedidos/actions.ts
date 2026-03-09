@@ -9,12 +9,15 @@ export async function createOrder(formData: FormData) {
   if (!user) throw new Error("No autorizado")
 
   const customerName = formData.get("customerName") as string
+  const customerPhone = formData.get("customerPhone") as string
   const templateId = formData.get("templateId") as string
   const quantity = parseInt(formData.get("quantity") as string)
   const deliveryDate = formData.get("deliveryDate") as string
-  const status = formData.get("status") as any // CONFIRMADO, PRESUPUESTADO, etc.
+  const designDetails = formData.get("designDetails") as string
+  const notes = formData.get("notes") as string
+  const status = formData.get("status") as any
+  const deposit = parseFloat(formData.get("deposit") as string) || 0 // La seña
 
-  // 1. Buscamos la plantilla para saber el precio y los materiales
   const template = await prisma.productTemplate.findUnique({
     where: { id: templateId },
     include: { materials: { include: { material: true } } }
@@ -25,40 +28,44 @@ export async function createOrder(formData: FormData) {
   const totalPrice = template.basePrice * quantity
   const totalCost = template.materials.reduce((acc, m) => acc + (m.quantity * m.material.unitPrice * quantity), 0)
 
-  // 2. Usamos una TRANSACCIÓN para asegurar que si algo falla, no se guarde nada a medias
   await prisma.$transaction(async (tx) => {
-    // A. Creamos el pedido
     const order = await tx.order.create({
       data: {
         customerName,
+        customerPhone,
         totalPrice,
         totalCost,
         status,
+        designDetails,
+        notes,
         deliveryDate: new Date(deliveryDate),
         userId: user.id,
         items: {
-          create: {
-            templateId: template.id,
-            quantity,
-            customPrice: template.basePrice,
-          }
-        }
+          create: { templateId: template.id, quantity, customPrice: template.basePrice }
+        },
+        // Si dejó seña, creamos el pago automáticamente
+        payments: deposit > 0 ? {
+          create: { amount: deposit, method: "SEÑA" }
+        } : undefined
       }
     })
 
-    // B. Si el pedido está CONFIRMADO o EN_PROCESO, restamos el stock
     if (status !== "PRESUPUESTADO") {
       for (const item of template.materials) {
         await tx.material.update({
           where: { id: item.materialId },
-          data: {
-            stock: { decrement: item.quantity * quantity }
-          }
+          data: { stock: { decrement: item.quantity * quantity } }
         })
       }
     }
   })
 
   revalidatePath("/dashboard/pedidos")
-  revalidatePath("/dashboard/stock")
+}
+
+export async function deleteOrder(id: string) {
+  await prisma.payment.deleteMany({ where: { orderId: id } })
+  await prisma.orderItem.deleteMany({ where: { orderId: id } })
+  await prisma.order.delete({ where: { id } })
+  revalidatePath("/dashboard/pedidos")
 }

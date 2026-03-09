@@ -77,19 +77,16 @@ model Order {
   id             String      @id @default(cuid())
   orderNumber    Int         @unique @default(autoincrement())
   customerName   String
+  customerPhone  String?     // Nuevo: Teléfono
   status         OrderStatus @default(PRESUPUESTADO)
   createdAt      DateTime    @default(now())
   deliveryDate   DateTime?
   totalCost      Float       @default(0)
   totalPrice     Float       @default(0)
-  fileUrl        String?     // Link a logo/diseño en Supabase Storage
+  designDetails  String?     // Nuevo: Qué se graba/imprime
   notes          String?
-  
-  // Relación con Usuario
   userId         String
   user           User        @relation(fields: [userId], references: [id])
-  
-  // Relaciones
   items          OrderItem[]
   payments       Payment[]   
 }
