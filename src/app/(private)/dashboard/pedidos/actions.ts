@@ -17,27 +17,31 @@ export async function createOrder(formData: FormData) {
   const designDetails = formData.get("designDetails") as string
   const status = formData.get("status") as any
   const deposit = parseFloat(formData.get("deposit") as string) || 0
+  
+  // LOGICA DE ARCHIVO MEJORADA
   const file = formData.get("file") as File
-
   let fileUrl = null
 
-  // SUBIDA DE IMAGEN MEJORADA
   if (file && file.size > 0) {
     const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}/${Date.now()}.${fileExt}` // Usamos Date.now() para que sea único
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`
     
+    // Convertimos el File a Buffer para que Next.js no lo corrompa
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('disenos')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        upsert: true
       })
 
-    if (uploadData) {
-      const { data: { publicUrl } } = supabase.storage.from('disenos').getPublicUrl(fileName)
-      fileUrl = publicUrl
-    } else if (uploadError) {
-      console.error("Error Supabase Storage:", uploadError.message)
+    if (uploadError) {
+      console.error("Error al subir:", uploadError.message)
+    } else {
+      const { data } = supabase.storage.from('disenos').getPublicUrl(fileName)
+      fileUrl = data.publicUrl
     }
   }
 
@@ -56,25 +60,11 @@ export async function createOrder(formData: FormData) {
   await prisma.$transaction(async (tx) => {
     await tx.order.create({
       data: {
-        customerName,
-        customerPhone,
-        totalPrice,
-        totalCost,
-        status,
-        designDetails,
-        fileUrl, 
+        customerName, customerPhone, totalPrice, totalCost, status,
+        designDetails, fileUrl, userId: user.id,
         deliveryDate: new Date(deliveryDate),
-        userId: user.id,
-        items: {
-          create: {
-            templateId: template.id,
-            quantity,
-            customPrice: template.basePrice,
-          }
-        },
-        payments: deposit > 0 ? {
-          create: { amount: deposit, method: "SEÑA" }
-        } : undefined
+        items: { create: { templateId: template.id, quantity, customPrice: template.basePrice } },
+        payments: deposit > 0 ? { create: { amount: deposit, method: "SEÑA" } } : undefined
       }
     })
 
@@ -102,7 +92,7 @@ export async function deleteOrder(id: string) {
     include: { items: { include: { template: { include: { materials: true } } } } }
   })
 
-  if (!order) throw new Error("Pedido no encontrado")
+  if (!order) return
 
   await prisma.$transaction(async (tx) => {
     if (order.status !== "PRESUPUESTADO") {
@@ -115,15 +105,6 @@ export async function deleteOrder(id: string) {
         }
       }
     }
-
-    // BORRADO FÍSICO DE LA IMAGEN EN STORAGE
-    if (order.fileUrl) {
-        const path = order.fileUrl.split('/public/disenos/')[1]
-        if (path) {
-            await supabase.storage.from('disenos').remove([path])
-        }
-    }
-
     await tx.payment.deleteMany({ where: { orderId: id } })
     await tx.orderItem.deleteMany({ where: { orderId: id } })
     await tx.order.delete({ where: { id, userId: user.id } })
