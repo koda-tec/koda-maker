@@ -9,33 +9,29 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) { return request.cookies.get(name)?.value },
-        set(name, value, options) {
-          request.cookies.set({ name, value, ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name, options) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request: { headers: request.headers } })
-          response.cookies.set({ name, value: '', ...options })
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
         },
       },
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // IMPORTANTE: Solo verificamos la sesión, no pedimos el usuario completo al Auth de Supabase.
+  // getUser() es una llamada de red extra que suma 300ms. getSession() es mucho más rápido.
+  const { data: { session } } = await supabase.auth.getSession()
 
-  // PROTECCIÓN: Si no hay usuario y trata de entrar a rutas privadas
   const isAuthPage = request.nextUrl.pathname.startsWith('/login')
   const isHomePage = request.nextUrl.pathname === '/'
-  
-  if (!user && !isAuthPage && !isHomePage) {
+  const isDashboard = request.nextUrl.pathname.startsWith('/dashboard')
+
+  if (!session && isDashboard) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Si ya está logueado y trata de ir al login, lo mandamos al dashboard
-  if (user && isAuthPage) {
+  if (session && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -43,5 +39,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: ['/dashboard/:path*', '/login'], // Solo protegemos lo necesario para no frenar el Home
 }
