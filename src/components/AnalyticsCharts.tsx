@@ -9,29 +9,29 @@ export function MonthlyChart({ data }: { data: any[] }) {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="h-300px w-full bg-gray-50 animate-pulse rounded-[30px]" />;
+  if (!mounted) return <div className="h-350px w-full bg-gray-50 animate-pulse rounded-[30px]" />;
 
   return (
-    <div className="h-300px w-full" style={{ minHeight: '300px', display: 'block' }}>
+    <div className="h-350px w-full" key={mounted ? 'mounted' : 'not-mounted'}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+        <BarChart data={data} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
           <XAxis 
             dataKey="name" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fontSize: 12, fontWeight: 'bold', fill: '#9ca3af' }} 
+            tick={{ fontSize: 12, fontWeight: '900', fill: '#4b5563' }} // Gris oscuro para que se vea
           />
-          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#d1d5db' }} />
+          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#9ca3af' }} />
           <Tooltip 
-            cursor={{ fill: '#f9fafb', radius: 10 }}
-            contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+            cursor={{ fill: '#f3f4f6', radius: 10 }}
+            contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
           />
           <Bar 
             dataKey="ganancia" 
             radius={[10, 10, 10, 10]} 
-            barSize={40}
-            isAnimationActive={false} // <--- ESTO ASEGURA QUE SE VEA AL CARGAR
+            barSize={45}
+            isAnimationActive={false}
           >
             {data.map((entry, index) => (
               <Cell 
