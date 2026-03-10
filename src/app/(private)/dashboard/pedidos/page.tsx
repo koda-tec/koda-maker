@@ -29,7 +29,9 @@ export default async function OrdersPage() {
     where: { userId: user?.id },
     include: { 
       items: { include: { template: true } }, 
-      payments: true 
+      payments: true,
+      images: true // <--- ESTO SOLUCIONA EL ERROR 500
+
     },
     orderBy: { createdAt: "desc" }
   })
@@ -90,10 +92,16 @@ export default async function OrdersPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Foto / Referencia Visual</label>
-                <input name="file" type="file" accept="image/*" className="w-full p-3 bg-gray-50 rounded-2xl text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-black file:text-white file:font-black" />
-            </div>
+          <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Fotos de referencia (puedes elegir varias)</label>
+                <input 
+                    name="files" // CAMBIADO A PLURAL
+                    type="file" 
+                    accept="image/*" 
+                    multiple // PROPIEDAD CLAVE
+                    className="w-full p-3 bg-gray-50 rounded-2xl text-[10px] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-black file:text-white" 
+                />
+          </div>
             <div className="space-y-1">
                 <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Fecha Entrega</label>
                 <input name="deliveryDate" type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none" required />
@@ -187,27 +195,32 @@ export default async function OrdersPage() {
 
                     {/* COLUMNA DERECHA: IMAGEN Y COBRO */}
                     <div className="flex flex-col justify-between space-y-8">
-                        
-                        {/* IMAGEN DE REFERENCIA */}
+                                                
+                        {/* GALERÍA DE IMÁGENES */}
                         <div className="relative">
-                            {order.fileUrl ? (
+                            {order.images && order.images.length > 0 ? (
                                 <div className="space-y-3">
-                                    <div className="rounded-[40px] overflow-hidden border-8 border-white shadow-2xl h-64 relative bg-gray-100">
-                                        <img src={order.fileUrl} className="w-full h-full object-cover" alt="Diseño" />
-                                        <a href={order.fileUrl} target="_blank" className="absolute bottom-4 right-4 p-4 bg-white text-black rounded-full shadow-2xl hover:scale-110 transition-all">
-                                            <DownloadCloud size={20} />
-                                        </a>
+                                    <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+                                        {order.images.map((img: any) => (
+                                            <div key={img.id} className="flex-none w-64 h-64 rounded-[40px] overflow-hidden border-8 border-white shadow-2xl relative snap-center bg-gray-100">
+                                                <img src={img.url} className="w-full h-full object-cover" alt="Diseño" />
+                                                <a href={img.url} target="_blank" className="absolute bottom-4 right-4 p-3 bg-white/90 backdrop-blur-sm text-black rounded-full shadow-lg">
+                                                    <DownloadCloud size={16} />
+                                                </a>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <p className="text-[9px] font-black text-center text-gray-400 uppercase tracking-widest">Referencia cargada con éxito</p>
+                                    <p className="text-[9px] font-black text-center text-gray-400 uppercase tracking-widest italic">
+                                        {order.images.length} imágenes cargadas (desliza para ver)
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="h-64 rounded-[40px] bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300">
                                     <ImageIcon size={40} />
-                                    <p className="text-[10px] font-black uppercase mt-2">Sin imagen adjunta</p>
+                                    <p className="text-[10px] font-black uppercase mt-2">Sin imágenes</p>
                                 </div>
                             )}
                         </div>
-
                         <div className="space-y-6">
                             <div className="flex justify-between items-end border-b border-gray-100 pb-4">
                                 <div>

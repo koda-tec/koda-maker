@@ -84,12 +84,19 @@ model Order {
   totalCost      Float       @default(0)
   totalPrice     Float       @default(0)
   designDetails  String?     // Nuevo: Qué se graba/imprime
-  fileUrl        String?     // <--- Asegurate que diga exactamente así
+  images         OrderImage[] 
   notes          String?
   userId         String
   user           User        @relation(fields: [userId], references: [id])
   items          OrderItem[]
   payments       Payment[]   
+}
+
+model OrderImage {
+  id      String @id @default(cuid())
+  url     String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
 }
 
 // Items específicos dentro de un pedido
