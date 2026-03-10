@@ -8,7 +8,8 @@ import {
   Package, 
   Users, 
   Zap,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from "lucide-react"
 import Link from "next/link"
 
@@ -38,7 +39,7 @@ export default async function ReportsPage() {
     include: { items: { include: { template: true } } }
   })
 
-  // 1. GENERAR MESES
+  // 1. GENERAR ESTRUCTURA DE MESES (Últimos 6 meses)
   const monthsNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
   const last6Months: MonthData[] = [];
   
@@ -54,7 +55,7 @@ export default async function ReportsPage() {
     });
   }
 
-  // 2. SUMAR PEDIDOS (Lógica mejorada)
+  // 2. SUMAR PEDIDOS AL GRÁFICO
   orders.forEach(order => {
     const d = new Date(order.createdAt);
     const m = d.getMonth();
@@ -66,7 +67,7 @@ export default async function ReportsPage() {
     }
   });
 
-  // 3. RANKING
+  // 3. RANKING DE PRODUCTOS
   const productStatsMap = new Map<string, ProductStat>();
   orders.forEach(o => {
     o.items.forEach(item => {
@@ -78,35 +79,35 @@ export default async function ReportsPage() {
       });
     });
   });
-
   const topProducts = Array.from(productStatsMap.values()).sort((a, b) => b.qty - a.qty).slice(0, 4);
 
+  // 4. MÉTRICAS GENERALES
   const totalRevenue = orders.reduce((acc, o) => acc + o.totalPrice, 0);
-  const totalCost = orders.reduce((acc, o) => acc + o.totalCost, 0);
+  const totalProfit = orders.reduce((acc, o) => acc + (o.totalPrice - o.totalCost), 0);
   const avgTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
-  const globalMargin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0;
+  const globalMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
   return (
     <div className="space-y-12 pb-32 pt-8 px-4 max-w-6xl mx-auto">
       <header className="flex flex-col gap-2">
-        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.5em] mb-1 italic">Business Intelligence</h1>
+        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.5em] mb-1 italic">Koda Business Intelligence</h1>
         <h2 className="text-5xl font-black text-black tracking-tighter uppercase leading-none">Analíticas</h2>
       </header>
 
-      {/* MÉTRICAS TOP */}
+      {/* MÉTRICAS TOP: Ahora incluimos Ganancia Total para que no haya dudas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <MiniStat label="Ventas Totales" value={`$${totalRevenue.toLocaleString('es-AR')}`} icon={<ArrowUpRight size={14}/>} />
-        <MiniStat label="Ticket Promedio" value={`$${avgTicket.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} icon={<Target size={14}/>} />
-        <MiniStat label="Cant. Pedidos" value={orders.length.toString()} icon={<Package size={14}/>} />
-        <MiniStat label="Clientes Únicos" value={[...new Set(orders.map(o => o.customerName))].length.toString()} icon={<Users size={14}/>} />
+        <MiniStat label="Facturación Total" value={`$${totalRevenue.toLocaleString('es-AR')}`} icon={<ArrowUpRight size={14}/>} color="text-black" />
+        <MiniStat label="Ganancia Total" value={`$${totalProfit.toLocaleString('es-AR')}`} icon={<TrendingUp size={14}/>} color="text-green-600" />
+        <MiniStat label="Ticket Promedio" value={`$${avgTicket.toLocaleString('es-AR', { maximumFractionDigits: 0 })}`} icon={<Target size={14}/>} color="text-black" />
+        <MiniStat label="Operaciones" value={orders.length.toString()} icon={<Package size={14}/>} color="text-black" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* GRÁFICO PRINCIPAL */}
-        <section className="lg:col-span-8 bg-white p-10 rounded-[50px] shadow-sm border border-gray-50 flex flex-col">
+        {/* GRÁFICO DE RENDIMIENTO */}
+        <section className="lg:col-span-8 bg-white p-10 rounded-[50px] shadow-sm border border-gray-50">
             <div className="flex justify-between items-start mb-10">
                 <div>
-                    <h3 className="font-black text-xl uppercase tracking-tighter">Rendimiento Mensual</h3>
+                    <h3 className="font-black text-xl uppercase tracking-tighter">Crecimiento Mensual</h3>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Comparativa de ganancias netas</p>
                 </div>
                 <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center shadow-inner text-[#f13d4b]">
@@ -116,12 +117,12 @@ export default async function ReportsPage() {
             
             <MonthlyChart data={last6Months} />
 
-            {/* TABLA DE RESUMEN (DEBUG PERO CON ESTILO) */}
+            {/* TABLA DE RESUMEN (DEBUG CON ESTILO) */}
             <div className="mt-10 pt-8 border-t border-gray-50 grid grid-cols-6 gap-2">
                 {last6Months.map((m) => (
                     <div key={m.name} className="text-center group">
                         <p className="text-[8px] font-black text-gray-300 uppercase group-hover:text-[#f13d4b] transition-colors">{m.name}</p>
-                        <p className={`text-[10px] font-black mt-1 ${m.ganancia > 0 ? 'text-black' : 'text-gray-200'}`}>
+                        <p className={`text-[11px] font-black mt-1 ${m.ganancia > 0 ? 'text-black' : 'text-gray-200'}`}>
                             ${m.ganancia > 0 ? m.ganancia.toLocaleString('es-AR') : '0'}
                         </p>
                     </div>
@@ -129,7 +130,7 @@ export default async function ReportsPage() {
             </div>
         </section>
 
-        {/* MÁS VENDIDOS */}
+        {/* RANKING DE PRODUCTOS */}
         <section className="lg:col-span-4 bg-black rounded-[50px] p-10 text-white shadow-2xl relative overflow-hidden flex flex-col">
             <h3 className="font-black text-xl uppercase tracking-tighter mb-10 relative z-10 italic">Más Vendidos</h3>
             <div className="space-y-8 relative z-10 flex-1">
@@ -142,7 +143,7 @@ export default async function ReportsPage() {
                                 <p className="text-[9px] font-bold text-zinc-500 uppercase mt-2 tracking-widest">{p.qty} unidades</p>
                             </div>
                         </div>
-                        <span className="text-sm font-black text-white">${p.revenue.toLocaleString('es-AR')}</span>
+                        <span className="text-sm font-black text-[#f13d4b]">${p.revenue.toLocaleString('es-AR')}</span>
                     </div>
                 ))}
             </div>
@@ -175,14 +176,14 @@ export default async function ReportsPage() {
   )
 }
 
-function MiniStat({ label, value, icon }: { label: string, value: string, icon: any }) {
+function MiniStat({ label, value, icon, color }: { label: string, value: string, icon: any, color: string }) {
     return (
         <div className="bg-white p-8 rounded-[40px] border border-gray-50 shadow-sm space-y-3 group hover:border-[#f13d4b] transition-all duration-500">
             <div className="flex items-center gap-2 text-gray-300 group-hover:text-[#f13d4b] transition-colors">
                 <div className="p-2 bg-gray-50 rounded-lg">{icon}</div>
-                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+                <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
             </div>
-            <p className="text-3xl font-black text-black tracking-tighter leading-none italic">{value}</p>
+            <p className={`text-3xl font-black tracking-tighter leading-none italic ${color}`}>{value}</p>
         </div>
     )
 }
