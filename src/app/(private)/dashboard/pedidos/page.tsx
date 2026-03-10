@@ -28,7 +28,7 @@ import { ConfirmOrderModal } from "@/components/ConfirmOrderModal"
 import { EditOrderModal } from "@/components/EditOrderModal"
 import { AddPaymentModal } from "@/components/AddPaymentModal"
 import { SubmitButton } from "@/components/SubmitButton"
-export const revalidate = 1; 
+
 interface PageProps {
   searchParams: Promise<{ search?: string, status?: string }>
 }
@@ -36,40 +36,40 @@ interface PageProps {
 export default async function OrdersPage({ searchParams }: PageProps) {
   const supabase = await createClient()
   
-  // 1. CARGA EN PARALELO INICIAL
-  const [userRes, query] = await Promise.all([
-    supabase.auth.getUser(),
-    searchParams
-  ])
-
-  const user = userRes.data.user
+  // 1. OBTENEMOS EL USUARIO DE AUTENTICACIÓN
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const query = await searchParams
   const statusFilter = query.status
   const searchQuery = query.search
 
-  // 2. CONSULTAS A BASE DE DATOS EN PARALELO (Optimiza el TTFB)
-  const [orders, templates] = await Promise.all([
+  // 2. CARGAMOS TODO EN PARALELO (Pedidos, Plantillas y el Perfil del Usuario de Prisma)
+  // Usamos el ID del authUser para buscar en nuestra tabla de User
+  const [orders, templates, dbUser] = await Promise.all([
     prisma.order.findMany({
       where: { 
-        userId: user?.id,
-        ...(query.status ? { status: query.status as any } : {}),
-        ...(query.search ? { customerName: { contains: query.search as string, mode: 'insensitive' } } : {}),
+        userId: authUser?.id,
+        ...(searchQuery ? { customerName: { contains: searchQuery as string, mode: 'insensitive' } } : {}),
+        ...(statusFilter 
+          ? { status: statusFilter as any } 
+          : { status: { in: ['PRESUPUESTADO', 'CONFIRMADO', 'EN_PROCESO'] } } 
+        ),
       },
       include: { 
         items: { include: { template: true } }, 
-        payments: true, 
+        payments: true,
         images: true 
       },
-      // ESTO ES CLAVE: Hace que la base de datos trabaje más rápido
-      // (Disponible en Prisma 5.10+)
-      //@ts-ignore 
-      relationLoadStrategy: 'join', 
       orderBy: { createdAt: "desc" }
     }),
     prisma.productTemplate.findMany({
-      where: { userId: user?.id },
+      where: { userId: authUser?.id },
       orderBy: { name: "asc" }
+    }),
+    prisma.user.findUnique({
+      where: { id: authUser?.id }
     })
-])
+  ])
+
   return (
     <div className="max-w-6xl mx-auto space-y-12 pb-32 pt-6 px-2 md:px-4">
       
@@ -100,55 +100,78 @@ export default async function OrdersPage({ searchParams }: PageProps) {
         </div>
       </header>
 
-      {/* FORMULARIO DE REGISTRO */}
-      <section className="bg-white p-6 md:p-10 rounded-[40px] shadow-sm border border-gray-100 mx-2 md:mx-0">
-        <div className="flex items-center gap-2 mb-8">
-            <div className="w-1.5 h-6 bg-[#f13d4b] rounded-full" />
-            <h3 className="font-black uppercase text-xs tracking-widest text-gray-800">Nueva Operación</h3>
-        </div>
-
-        <form action={createOrder} encType="multipart/form-data" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input name="customerName" placeholder="Nombre Cliente" className="w-full p-4 bg-gray-50 rounded-2xl outline-none text-sm font-bold border-none focus:ring-2 focus:ring-[#f13d4b]" required />
-            <input name="customerPhone" placeholder="WhatsApp (Ej: 1122334455)" className="w-full p-4 bg-gray-50 rounded-2xl outline-none text-sm font-bold border-none focus:ring-2 focus:ring-[#f13d4b]" />
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <select name="templateId" className="col-span-2 md:col-span-2 p-4 bg-gray-50 rounded-2xl text-sm font-black border-none appearance-none cursor-pointer" required>
-                <option value="">Seleccionar Producto...</option>
-                {templates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} (${t.basePrice})</option>
-                ))}
-            </select>
-            <input name="quantity" type="number" defaultValue="1" className="p-4 bg-gray-50 rounded-2xl text-sm font-black text-center border-none" required />
-          </div>
-
-          <textarea name="designDetails" placeholder="Instrucciones de grabado/diseño (tipografía, logos, etc)..." className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-medium h-24 border-none resize-none" />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-            <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase text-gray-400 ml-2 italic tracking-widest">Referencias Visuales</label>
-                <input name="files" type="file" accept="image/*" multiple className="w-full p-3 bg-gray-50 rounded-2xl text-[10px] file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-black file:text-white cursor-pointer" />
+      {/* SECCIÓN 1: FORMULARIO DE REGISTRO (Solo visible si no estamos viendo entregados) */}
+      {statusFilter !== 'ENTREGADO' && (
+        <section className="bg-white p-6 md:p-10 rounded-[40px] shadow-sm border border-gray-100 mx-2 md:mx-0">
+            <div className="flex items-center gap-2 mb-8">
+                <div className="w-1.5 h-6 bg-[#f13d4b] rounded-full" />
+                <h3 className="font-black uppercase text-xs tracking-widest text-gray-800">Nueva Operación</h3>
             </div>
-            <div className="space-y-1">
-                <label className="text-[9px] font-black uppercase text-gray-400 ml-2 italic tracking-widest">Fecha de Entrega</label>
-                <input name="deliveryDate" type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none" />
+
+            <form action={createOrder} encType="multipart/form-data" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Nombre del Cliente</label>
+                    <input name="customerName" placeholder="Juan Pérez" className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-[#f13d4b] text-sm font-bold" required />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2">WhatsApp (Sin 0 ni 15)</label>
+                    <input name="customerPhone" placeholder="11 2233 4455" className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-[#f13d4b] text-sm font-bold" />
+                </div>
             </div>
-          </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2 space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Producto a vender</label>
+                    <select name="templateId" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none appearance-none" required>
+                        <option value="">Seleccionar del catálogo...</option>
+                        {templates.map(t => (
+                            <option key={t.id} value={t.id}>{t.name} (Ref: ${t.basePrice})</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Cantidad</label>
+                    <input name="quantity" type="number" defaultValue="1" min="1" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black text-center border-none" required />
+                </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <input name="deposit" type="number" step="0.01" placeholder="Seña inicial $" className="p-4 bg-red-50 text-[#f13d4b] rounded-2xl font-black border-none placeholder:text-red-200" />
-            <select name="status" className="p-4 bg-gray-50 rounded-2xl text-sm font-black border-none text-[#f13d4b] cursor-pointer">
-                <option value="CONFIRMADO">✓ CONFIRMADO</option>
-                <option value="PRESUPUESTADO">? PRESUPUESTO</option>
-            </select>
-          </div>
+            <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Instrucciones de Grabado / Diseño</label>
+                <textarea name="designDetails" placeholder="Ej: Logo empresa en frente, nombre atrás..." className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none text-sm font-medium h-24 resize-none" />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2 italic tracking-widest">Adjuntar Fotos</label>
+                    <input name="files" type="file" accept="image/*" multiple className="w-full p-3 bg-gray-50 rounded-2xl text-[10px] file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-black file:text-white cursor-pointer" />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2 italic tracking-widest">Fecha Entrega (Opcional)</label>
+                    <input name="deliveryDate" type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none" />
+                </div>
+            </div>
 
-          <SubmitButton label="Registrar Operación" />
-        </form>
-      </section>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-[#f13d4b] ml-2 italic">Seña Recibida ($)</label>
+                    <input name="deposit" type="number" step="0.01" placeholder="0.00" className="w-full p-4 bg-red-50 text-[#f13d4b] border border-red-100 rounded-2xl outline-none text-sm font-black placeholder:text-red-200" />
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Estado Inicial</label>
+                    <select name="status" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none text-[#f13d4b] cursor-pointer">
+                        <option value="CONFIRMADO">✓ CONFIRMADO</option>
+                        <option value="PRESUPUESTADO">? PRESUPUESTO</option>
+                    </select>
+                </div>
+            </div>
 
-      {/* LISTADO DE TARJETAS DE PEDIDOS */}
+            <SubmitButton label="Registrar Operación" />
+            </form>
+        </section>
+      )}
+
+      {/* SECCIÓN 2: LISTADO DE TARJETAS DE PEDIDOS */}
       <div className="space-y-10">
         {orders.map((order) => {
           const totalPaid = order.payments.reduce((acc, p) => acc + p.amount, 0);
@@ -190,7 +213,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                             <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center"><PackageOpen size={24} className="text-[#f13d4b]" /></div>
                             <div>
                                 <p className="text-[10px] font-black uppercase text-zinc-500 tracking-tighter mb-1">Item pedido</p>
-                                <h5 className="text-xl font-black uppercase leading-none truncate max-w-140px md:max-w-none">{product?.name || "Producto"}</h5>
+                                <h5 className="text-xl font-black uppercase leading-none truncate max-w-35 md:max-w-none">{product?.name || "Producto"}</h5>
                             </div>
                         </div>
                         <div className="text-right">
@@ -222,7 +245,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                                         </div>
                                     ))}
                                 </div>
-                                <p className="text-[9px] font-black text-center text-gray-400 uppercase tracking-widest">Desliza para ver las fotos ({order.images.length})</p>
+                                <p className="text-[9px] font-black text-center text-gray-400 uppercase tracking-widest italic">Desliza para ver fotos ({order.images.length})</p>
                             </div>
                         ) : (
                             <div className="h-64 rounded-[40px] bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300">
@@ -235,7 +258,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                     <div className="space-y-6">
                         <div className="flex justify-between items-end border-b border-gray-100 pb-4 px-2">
                             <div>
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Fecha Entrega</p>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Fecha Entrega</p>
                                 <p suppressHydrationWarning className="text-xl font-black uppercase flex items-center gap-2 italic">
                                     <Calendar size={18} className="text-[#f13d4b]" />
                                     {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('es-AR', {day:'2-digit', month:'short'}) : "PENDIENTE"}
@@ -247,7 +270,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                             </div>
                         </div>
 
-                        {/* PROGRESO DE COBRO */}
+                        {/* BARRA DE PROGRESO DE COBRO */}
                         <div className="space-y-4">
                             <div className="flex justify-between items-end px-1">
                                 <span className="text-[10px] font-black uppercase text-gray-400">Estado financiero</span>
@@ -257,7 +280,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                             </div>
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center px-1">
-                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full ${remaining <= 0 ? 'bg-green-500 text-white' : 'bg-[#f13d4b] text-white'}`}>
+                                    <span suppressHydrationWarning className={`text-[10px] font-black px-3 py-1 rounded-full ${remaining <= 0 ? 'bg-green-500 text-white' : 'bg-[#f13d4b] text-white'}`}>
                                         {remaining <= 0 ? 'COBRADO TOTAL' : `FALTA $${remaining.toFixed(2)}`}
                                     </span>
                                 </div>
@@ -285,14 +308,18 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                             )}
                         </div>
                         
-                        <OrderTicket order={order} businessName={user?.user_metadata?.full_name || "SyG Creaciones"} />
+                        <OrderTicket 
+                            order={order} 
+                            businessName={dbUser?.name || "SyG Creaciones"} 
+                            logoUrl={dbUser?.logoUrl} 
+                        />
                         
                         <div className="flex justify-between items-center px-4 mt-2">
                             <EditOrderModal order={order} />
                             <a 
-                              href={`https://wa.me/${order.customerPhone?.replace(/\D/g, '')}`} 
-                              target="_blank" 
-                              className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase hover:text-black transition-all"
+                                href={`https://wa.me/${order.customerPhone?.replace(/\D/g, '')}`} 
+                                target="_blank" 
+                                className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase hover:text-black transition-all"
                             >
                                 <MessageSquare size={14} /> WhatsApp
                             </a>
@@ -308,7 +335,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
         {orders.length === 0 && (
           <div className="text-center py-24 bg-gray-50 rounded-[60px] border-2 border-dashed border-gray-200 mx-4 md:mx-0">
              <ShoppingCart className="text-gray-200 mx-auto mb-4" size={64} />
-             <p className="text-gray-400 font-bold uppercase tracking-widest text-xs italic">Aún no hay operaciones en esta sección</p>
+             <p className="text-gray-400 font-bold uppercase tracking-widest text-xs italic">No hay operaciones en esta sección</p>
           </div>
         )}
       </div>

@@ -4,26 +4,35 @@ import { toPng } from 'html-to-image'
 import { Download, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export function OrderTicket({ order, businessName }: { order: any, businessName: string }) {
+interface OrderTicketProps {
+    order: any
+    businessName: string
+    logoUrl?: string | null
+}
+
+export function OrderTicket({ order, businessName, logoUrl }: OrderTicketProps) {
     const ticketRef = useRef<HTMLDivElement>(null)
     const [loading, setLoading] = useState(false)
 
     const exportImage = async () => {
         if (ticketRef.current === null) return
         setLoading(true)
+        
         try {
-            // Esperamos un momento para renderizado
-            await new Promise(resolve => setTimeout(resolve, 500))
+            // Damos un pequeño respiro para que el navegador renderice bien las imágenes externas
+            await new Promise(resolve => setTimeout(resolve, 600))
+            
             const dataUrl = await toPng(ticketRef.current, { 
                 cacheBust: true, 
-                pixelRatio: 2,
+                pixelRatio: 3, // Alta calidad
                 backgroundColor: '#ffffff',
             })
+            
             const link = document.createElement('a')
             link.download = `Presupuesto-${order.customerName}.png`
             link.href = dataUrl
             link.click()
-            toast.success("Imagen generada")
+            toast.success("Imagen generada correctamente")
         } catch (err) {
             toast.error("Error al generar imagen")
             console.error(err)
@@ -34,52 +43,83 @@ export function OrderTicket({ order, businessName }: { order: any, businessName:
 
     return (
         <div className="w-full">
-            {/* EL TICKET: Con 'fixed' y lejos de la vista real */}
-            <div style={{ position: 'fixed', top: '-10000px', left: '-10000px', zIndex: -100 }}>
+            {/* ÁREA DE CAPTURA (OCULTA TOTALMENTE) */}
+            <div style={{ position: 'fixed', top: '-10000px', left: '-10000px', pointerEvents: 'none' }}>
                 <div 
                     ref={ticketRef} 
-                    className="w-500px bg-white p-12 text-black font-sans"
-                    style={{ backgroundColor: 'white' }}
+                    className="w-125 bg-white p-12 text-black font-sans border-16 border-black"
                 >
-                    <div className="text-center border-b-4 border-black pb-8 mb-8">
+                    {/* CABECERA CON LOGO DINÁMICO */}
+                    <div className="text-center mb-10 pb-8 border-b-2 border-dashed border-gray-200 flex flex-col items-center">
+                        {logoUrl ? (
+                            <img 
+                                src={logoUrl} 
+                                alt="Logo" 
+                                className="w-24 h-24 object-contain mb-4 rounded-xl"
+                            />
+                        ) : (
+                            <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mb-4">
+                                <span className="text-white font-black text-2xl">K</span>
+                            </div>
+                        )}
                         <h2 className="text-4xl font-black uppercase tracking-tighter">{businessName}</h2>
-                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-2">Presupuesto de Trabajo</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] mt-2">Presupuesto Digital</p>
                     </div>
 
-                    <div className="flex justify-between font-black uppercase mb-10">
+                    {/* DATOS DEL CLIENTE */}
+                    <div className="flex justify-between text-sm mb-10 font-black uppercase italic">
                         <span>Cliente: {order.customerName}</span>
-                        <span>{new Date().toLocaleDateString()}</span>
+                        <span>{new Date().toLocaleDateString('es-AR')}</span>
                     </div>
 
-                    <div className="space-y-6 mb-10">
+                    {/* DETALLE DE PRODUCTOS */}
+                    <div className="space-y-6 mb-12">
                         {order.items.map((item: any) => (
                             <div key={item.id} className="flex justify-between items-end border-b border-gray-100 pb-4">
                                 <div>
-                                    <p className="font-black text-xl uppercase leading-none">{item.template.name}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold mt-1">{item.quantity} UNIDADES X ${item.customPrice}</p>
+                                    <p className="font-black text-2xl uppercase leading-none">{item.template.name}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold mt-2">
+                                        {item.quantity} UNIDADES X ${item.customPrice.toLocaleString('es-AR')}
+                                    </p>
                                 </div>
-                                <span className="font-black text-xl">${(item.quantity * item.customPrice).toFixed(2)}</span>
+                                <span className="font-black text-2xl">
+                                    ${(item.quantity * item.customPrice).toLocaleString('es-AR')}
+                                </span>
                             </div>
                         ))}
                     </div>
 
-                    <div className="bg-black text-white p-8 rounded-3xl flex justify-between items-center">
-                        <span className="font-bold text-xs uppercase tracking-widest">Total a Pagar</span>
-                        <span className="text-4xl font-black">${order.totalPrice.toFixed(2)}</span>
+                    {/* TOTAL FINAL DESTACADO */}
+                    <div className="bg-black text-white p-8 rounded-[30px] flex justify-between items-center shadow-xl">
+                        <span className="font-bold text-xs uppercase tracking-widest text-zinc-400">Total a Pagar</span>
+                        <span className="text-5xl font-black">${order.totalPrice.toLocaleString('es-AR')}</span>
                     </div>
 
-                    <p className="text-[10px] text-center text-gray-400 font-bold uppercase mt-12 tracking-[0.4em]">S&G CREACIONES • GESTIÓN</p>
+                    {/* PIE DE TICKET */}
+                    <div className="mt-12 text-center space-y-2">
+                        <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.5em]">KODA MAKER • SISTEMA DE GESTIÓN</p>
+                        <p className="text-[9px] text-zinc-400 italic">Válido por 7 días • Los precios pueden variar sin previo aviso.</p>
+                    </div>
                 </div>
             </div>
 
-            {/* EL BOTÓN QUE VÉS EN LA PANTALLA */}
+            {/* BOTÓN VISIBLE EN LA APLICACIÓN */}
             <button 
                 onClick={exportImage}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-black text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#f13d4b] transition-all disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 bg-black text-white py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-[#f13d4b] transition-all disabled:opacity-50 active:scale-95"
             >
-                {loading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-                {loading ? "Generando..." : "Descargar Presupuesto PNG"}
+                {loading ? (
+                    <>
+                        <Loader2 className="animate-spin" size={16} />
+                        Procesando imagen...
+                    </>
+                ) : (
+                    <>
+                        <Download size={16} strokeWidth={3} />
+                        Descargar Presupuesto PNG
+                    </>
+                )}
             </button>
         </div>
     )
