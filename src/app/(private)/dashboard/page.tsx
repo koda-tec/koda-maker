@@ -73,9 +73,9 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-2 bg-gray-100/50 p-2 rounded-2xl border border-gray-100">
             <CalendarDays size={16} className="text-gray-400" />
-            <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
-                {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
-            </span>
+        <span suppressHydrationWarning className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
+            {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+        </span>
         </div>
       </header>
 
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
                             </div>
                             <div>
                                 <h4 className="font-black text-lg uppercase tracking-tighter leading-none mb-1">{order.customerName}</h4>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic flex items-center gap-1">
+                                <p suppressHydrationWarning className="text-[10px] font-bold text-gray-400 uppercase tracking-widest italic flex items-center gap-1">
                                     <CalendarDays size={10} /> Entrega: {order.deliveryDate?.toLocaleDateString('es-AR', {day: '2-digit', month: 'long'})}
                                 </p>
                             </div>

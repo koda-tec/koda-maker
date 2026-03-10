@@ -78,7 +78,9 @@ export default async function StockPage() {
               </div>
               <div>
                 <h4 className="font-bold text-black">{m.name}</h4>
-                <p className="text-[10px] uppercase font-black text-gray-400">{m.type} • ${m.unitPrice} / {m.unit}</p>
+                <p suppressHydrationWarning className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  {m.type} • ${m.unitPrice.toFixed(2)} / {m.unit}
+                </p>
               </div>
             </div>
             

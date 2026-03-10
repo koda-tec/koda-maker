@@ -100,7 +100,7 @@ export default async function ReportsPage() {
       <section className="space-y-6">
         <div className="flex items-center gap-3 px-4">
             <Calendar className="text-[#f13d4b]" size={20} />
-            <h3 className="font-black uppercase text-sm tracking-widest text-black underline decoration-[#f13d4b] decoration-2 underline-offset-8">
+            <h3 suppressHydrationWarning className="font-black uppercase text-sm tracking-widest text-black underline decoration-[#f13d4b] decoration-2 underline-offset-8">
                 Rendimiento de {monthsNames[now.getMonth()]}
             </h3>
         </div>
@@ -153,13 +153,13 @@ export default async function ReportsPage() {
             <MonthlyChart data={last6Months} />
 
             <div className="mt-10 pt-8 border-t border-gray-100 grid grid-cols-6 gap-2">
-                {last6Months.map((m) => (
-                    <div key={m.name} className="text-center group">
-                        <p className="text-[8px] font-black text-zinc-800 uppercase tracking-tighter">{m.name}</p>
-                        <p className={`text-[11px] font-black mt-1 ${m.ganancia > 0 ? 'text-black' : 'text-zinc-300'}`}>
-                            ${m.ganancia > 0 ? m.ganancia.toLocaleString('es-AR') : '0'}
-                        </p>
-                    </div>
+            {last6Months.map((m) => (
+                <div key={m.name} className="text-center group">
+                    <p suppressHydrationWarning className="text-[8px] font-black text-zinc-800 uppercase tracking-tighter">{m.name}</p>
+                    <p suppressHydrationWarning className="...">
+                        ${m.ganancia > 0 ? m.ganancia.toLocaleString('es-AR') : '0'}
+                    </p>
+                </div>
                 ))}
             </div>
         </section>
