@@ -1,26 +1,51 @@
 "use client"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export function MonthlyChart({ data }: { data: any[] }) {
+  // Verificamos si hay datos reales para mostrar (evita que el gráfico intente dibujar ceros)
+  const hasData = data.some(d => d.ganancia > 0 || d.ventas > 0);
+
+  if (!hasData) {
+    return (
+      <div className="h-300px w-full flex items-center justify-center border-2 border-dashed border-gray-100 rounded-[40px] bg-gray-50/50">
+        <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.2em]">Esperando ciclo de ventas...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-300px w-full mt-4">
+    <div className="h-300px w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+        <BarChart data={data} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
           <XAxis 
             dataKey="name" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fontSize: 10, fontWeight: 'bold', fill: '#9ca3af' }} 
+            tick={{ fontSize: 10, fontWeight: '900', fill: '#9ca3af' }} // Quitamos textTransform de aquí
           />
-          <YAxis hide />
+          <YAxis 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fontWeight: 'bold', fill: '#d1d5db' }} 
+          />
           <Tooltip 
-            cursor={{ fill: '#f9fafb' }}
-            contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+            cursor={{ fill: '#f9fafb', radius: 10 }}
+            contentStyle={{ 
+                borderRadius: '24px', 
+                border: 'none', 
+                boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', 
+                padding: '16px',
+                fontSize: '12px',
+                fontWeight: 'bold'
+            }}
           />
-          <Bar dataKey="ganancia" radius={[10, 10, 10, 10]} barSize={40}>
+          <Bar dataKey="ganancia" radius={[10, 10, 10, 10]} barSize={35}>
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={index === data.length - 1 ? '#f13d4b' : '#000000'} />
+              <Cell 
+                key={`cell-${index}`} 
+                fill={index === data.length - 1 ? '#f13d4b' : '#000000'} 
+              />
             ))}
           </Bar>
         </BarChart>
