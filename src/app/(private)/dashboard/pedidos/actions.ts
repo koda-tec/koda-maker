@@ -238,3 +238,22 @@ export async function markAsDelivered(id: string) {
     await prisma.order.update({ where: { id }, data: { status: 'ENTREGADO' } })
     revalidatePath("/dashboard/pedidos")
 }
+
+//Registrar un pago extra
+export async function addPayment(orderId: string, formData: FormData) {
+    const amount = parseFloat(formData.get("amount") as string)
+    const method = formData.get("method") as string || "EFECTIVO"
+
+    if (isNaN(amount) || amount <= 0) return
+
+    await prisma.payment.create({
+        data: {
+            orderId,
+            amount,
+            method,
+            date: new Date()
+        }
+    })
+
+    revalidatePath("/dashboard/pedidos")
+}
