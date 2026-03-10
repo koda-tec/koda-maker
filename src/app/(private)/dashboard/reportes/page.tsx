@@ -59,14 +59,24 @@ export default async function ReportsPage() {
   }
 
   // Llenamos los datos sumando los pedidos
-  orders.forEach(order => {
-    const orderDate = new Date(order.createdAt);
-    const monthMatch = last6Months.find(m => m.month === orderDate.getMonth() && m.year === orderDate.getFullYear());
+ orders.forEach(order => {
+    // Forzamos a que la fecha se lea correctamente sin importar la zona horaria
+    const d = new Date(order.createdAt);
+    const oMonth = d.getUTCMonth(); // Usamos UTC para evitar desfases de horas
+    const oYear = d.getUTCFullYear();
+
+    const monthMatch = last6Months.find(m => m.month === oMonth && m.year === oYear);
+    
     if (monthMatch) {
-      monthMatch.ganancia += (order.totalPrice - order.totalCost);
+      const profit = order.totalPrice - order.totalCost;
+      monthMatch.ganancia += profit;
       monthMatch.ventas += order.totalPrice;
     }
   });
+
+  // LOG DE CONTROL (Solo para que veas en tu terminal si hay datos)
+  console.log("PEDIDOS ENCONTRADOS:", orders.length);
+  console.log("DATOS PROCESADOS PARA GRÁFICO:", last6Months);
 
   // 3. PRODUCTOS MÁS VENDIDOS (Ranking)
   const productStatsMap = new Map<string, ProductStat>();
