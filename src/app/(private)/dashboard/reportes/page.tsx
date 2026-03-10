@@ -14,7 +14,6 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-// --- INTERFACES ---
 interface MonthData {
   month: number;
   year: number;
@@ -33,7 +32,6 @@ export default async function ReportsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 1. OBTENER DATOS
   const orders = await prisma.order.findMany({
     where: { 
         userId: user?.id,
@@ -45,19 +43,19 @@ export default async function ReportsPage() {
   // --- LÓGICA DE TIEMPO ---
   const now = new Date()
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const monthsNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
 
-  // 2. CÁLCULOS HISTÓRICOS (Todo el tiempo)
+  // 1. CÁLCULOS HISTÓRICOS (Todo el historial)
   const totalRevenueAllTime = orders.reduce((acc, o) => acc + o.totalPrice, 0)
   const totalProfitAllTime = orders.reduce((acc, o) => acc + (o.totalPrice - o.totalCost), 0)
   const globalMargin = totalRevenueAllTime > 0 ? (totalProfitAllTime / totalRevenueAllTime) * 100 : 0
 
-  // 3. CÁLCULOS MES ACTUAL
+  // 2. CÁLCULOS MES VIGENTE
   const currentMonthOrders = orders.filter(o => new Date(o.createdAt) >= startOfMonth)
   const totalRevenueMonth = currentMonthOrders.reduce((acc, o) => acc + o.totalPrice, 0)
   const totalProfitMonth = currentMonthOrders.reduce((acc, o) => acc + (o.totalPrice - o.totalCost), 0)
 
-  // 4. PROCESAR ÚLTIMOS 6 MESES PARA GRÁFICO
-  const monthsNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+  // 3. GENERAR ÚLTIMOS 6 MESES PARA GRÁFICO
   const last6Months: MonthData[] = []
   for (let i = 5; i >= 0; i--) {
     const d = new Date()
@@ -78,9 +76,9 @@ export default async function ReportsPage() {
       match.ganancia += (order.totalPrice - order.totalCost)
       match.ventas += order.totalPrice
     }
-  })
+  });
 
-  // 5. RANKING DE PRODUCTOS
+  // 4. RANKING PRODUCTOS
   const productStatsMap = new Map<string, ProductStat>()
   orders.forEach(o => {
     o.items.forEach(item => {
@@ -94,27 +92,29 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-12 pb-32 pt-8 px-4 max-w-6xl mx-auto">
       <header className="flex flex-col gap-2">
-        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.5em] mb-1 italic">Koda Maker System</h1>
+        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.5em] mb-1 italic">Koda Business Intelligence</h1>
         <h2 className="text-5xl font-black text-black tracking-tighter uppercase leading-none">Analíticas</h2>
       </header>
 
-      {/* SECCIÓN: RENDIMIENTO DEL MES VIGENTE */}
+      {/* BLOQUE 1: MES VIGENTE (Claridad de datos actuales) */}
       <section className="space-y-6">
         <div className="flex items-center gap-3 px-4">
             <Calendar className="text-[#f13d4b]" size={20} />
-            <h3 className="font-black uppercase text-sm tracking-widest text-black underline decoration-[#f13d4b] decoration-2 underline-offset-4">Mes en Curso ({monthsNames[now.getMonth()]})</h3>
+            <h3 className="font-black uppercase text-sm tracking-widest text-black underline decoration-[#f13d4b] decoration-2 underline-offset-8">
+                Rendimiento de {monthsNames[now.getMonth()]}
+            </h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-10 rounded-[45px] border-2 border-zinc-100 shadow-sm flex justify-between items-center group hover:border-black transition-all">
                 <div>
-                    <p className="text-[11px] font-black uppercase text-zinc-500 tracking-widest mb-2">Facturación Mensual</p>
+                    <p className="text-[11px] font-black uppercase text-zinc-700 tracking-widest mb-2 italic">Facturación del Mes</p>
                     <h4 className="text-5xl font-black text-black tracking-tighter">${totalRevenueMonth.toLocaleString('es-AR')}</h4>
                 </div>
                 <ArrowUpRight className="text-zinc-200 group-hover:text-black transition-colors" size={40} />
             </div>
             <div className="bg-green-50 p-10 rounded-[45px] border-2 border-green-200 flex justify-between items-center group hover:bg-green-100 transition-all">
                 <div>
-                    <p className="text-[11px] font-black uppercase text-green-700 tracking-widest mb-2">Ganancia Neta Mensual</p>
+                    <p className="text-[11px] font-black uppercase text-green-700 tracking-widest mb-2 italic">Ganancia Neta del Mes</p>
                     <h4 className="text-5xl font-black text-green-900 tracking-tighter">${totalProfitMonth.toLocaleString('es-AR')}</h4>
                 </div>
                 <TrendingUp className="text-green-300 group-hover:text-green-600 transition-colors" size={40} />
@@ -122,11 +122,11 @@ export default async function ReportsPage() {
         </div>
       </section>
 
-      {/* SECCIÓN: HISTÓRICO TOTAL ACUMULADO */}
+      {/* BLOQUE 2: HISTÓRICO TOTAL (Toda la vida del sistema) */}
       <section className="space-y-6">
         <div className="flex items-center gap-3 px-4">
-            <History className="text-zinc-400" size={20} />
-            <h3 className="font-black uppercase text-sm tracking-widest text-black">Historial Completo</h3>
+            <History className="text-zinc-500" size={20} />
+            <h3 className="font-black uppercase text-sm tracking-widest text-black">Acumulado Histórico</h3>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <MiniStat label="Facturación Total" value={`$${totalRevenueAllTime.toLocaleString('es-AR')}`} icon={<ArrowUpRight size={14}/>} dark />
@@ -136,32 +136,48 @@ export default async function ReportsPage() {
         </div>
       </section>
 
-      {/* GRÁFICO Y PRODUCTOS */}
+      {/* GRÁFICO Y RANKING */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <section className="lg:col-span-8 bg-white p-10 rounded-[50px] shadow-xl border border-zinc-100">
+        {/* GRÁFICO: Se mantiene el contenedor que funcionaba */}
+        <section className="lg:col-span-8 bg-white p-10 rounded-[50px] shadow-sm border border-gray-50 flex flex-col">
             <div className="flex justify-between items-start mb-10">
                 <div>
-                    <h3 className="font-black text-2xl uppercase tracking-tighter text-black">Flujo de Ganancia</h3>
-                    <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Beneficio neto de los últimos 6 meses</p>
+                    <h3 className="font-black text-xl uppercase tracking-tighter text-black">Flujo de Ganancia</h3>
+                    <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest mt-1 italic">Comparativa mensual de beneficio neto</p>
                 </div>
-                <BarChart3 className="text-[#f13d4b]" size={32} />
+                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-[#f13d4b]">
+                    <BarChart3 size={24} />
+                </div>
             </div>
+            
             <MonthlyChart data={last6Months} />
+
+            <div className="mt-10 pt-8 border-t border-gray-100 grid grid-cols-6 gap-2">
+                {last6Months.map((m) => (
+                    <div key={m.name} className="text-center group">
+                        <p className="text-[8px] font-black text-zinc-800 uppercase tracking-tighter">{m.name}</p>
+                        <p className={`text-[11px] font-black mt-1 ${m.ganancia > 0 ? 'text-black' : 'text-zinc-300'}`}>
+                            ${m.ganancia > 0 ? m.ganancia.toLocaleString('es-AR') : '0'}
+                        </p>
+                    </div>
+                ))}
+            </div>
         </section>
 
+        {/* MÁS VENDIDOS */}
         <section className="lg:col-span-4 bg-black rounded-[50px] p-10 text-white shadow-2xl relative overflow-hidden flex flex-col">
-            <h3 className="font-black text-xl uppercase tracking-tighter mb-10 relative z-10 italic underline decoration-[#f13d4b]">Top Productos</h3>
+            <h3 className="font-black text-xl uppercase tracking-tighter mb-10 relative z-10 italic">Top Ventas</h3>
             <div className="space-y-8 relative z-10 flex-1">
                 {topProducts.map((p, i) => (
                     <div key={p.name} className="flex items-center justify-between group">
                         <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-zinc-700">0{i+1}</span>
+                            <span className="text-xs font-black text-zinc-700 group-hover:text-[#f13d4b]">0{i+1}</span>
                             <div>
                                 <p className="text-sm font-black uppercase tracking-tight leading-none text-zinc-100">{p.name}</p>
                                 <p className="text-[9px] font-bold text-zinc-500 uppercase mt-2 tracking-widest">{p.qty} unidades</p>
                             </div>
                         </div>
-                        <span className="text-sm font-black text-[#f13d4b]">${p.revenue.toLocaleString('es-AR')}</span>
+                        <span className="text-sm font-black text-white">${p.revenue.toLocaleString('es-AR')}</span>
                     </div>
                 ))}
             </div>
@@ -169,22 +185,22 @@ export default async function ReportsPage() {
         </section>
       </div>
 
-      {/* SALUD FINANCIERA (RENTABILIDAD) */}
-      <section className="bg-white p-12 rounded-[60px] border-4 border-zinc-50 flex flex-col lg:flex-row items-center justify-between gap-10 shadow-sm">
-        <div className="flex items-center gap-10">
-            <div className="w-24 h-24 bg-red-50 rounded-[40px] flex items-center justify-center text-[#f13d4b] shadow-inner">
+      {/* SALUD FINANCIERA */}
+      <section className="bg-white p-12 rounded-[60px] border-2 border-zinc-100 flex flex-col lg:flex-row items-center justify-between gap-10 shadow-sm relative overflow-hidden">
+        <div className="flex items-center gap-10 relative z-10">
+            <div className="w-24 h-24 bg-red-50 rounded-[40px] flex items-center justify-center text-[#f13d4b] shadow-inner shadow-red-100/50">
                 <Zap size={48} strokeWidth={2.5} />
             </div>
             <div className="space-y-3">
-                <h4 className="text-3xl font-black uppercase tracking-tighter text-black">Eficiencia del Negocio</h4>
-                <p className="text-lg text-zinc-500 font-medium max-w-lg leading-relaxed">
-                    Tu rentabilidad global acumulada es del <span className="text-black font-black underline decoration-[#f13d4b] decoration-4 underline-offset-8">{globalMargin.toFixed(1)}%</span>. 
-                    {globalMargin > 50 ? " El negocio es muy saludable." : " Revisa tus márgenes."}
+                <h4 className="text-3xl font-black uppercase tracking-tighter text-black">Eficiencia Operativa</h4>
+                <p className="text-base text-zinc-700 font-medium max-w-lg leading-relaxed">
+                    Tu margen de beneficio global es del <span className="text-black font-black underline decoration-[#f13d4b] decoration-4 underline-offset-8">{globalMargin.toFixed(1)}%</span>.
+                    {globalMargin > 40 ? " ¡El negocio es muy saludable!" : " Deberías revisar tus precios."}
                 </p>
             </div>
         </div>
-        <Link href="/dashboard/templates" className="w-full lg:w-auto px-12 py-6 bg-black text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] hover:bg-[#f13d4b] transition-all shadow-2xl active:scale-95 text-center">
-            Ajustar Catálogo
+        <Link href="/dashboard/templates" className="w-full lg:w-auto px-12 py-6 bg-black text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] hover:bg-[#f13d4b] transition-all shadow-2xl active:scale-95 text-center relative z-10">
+            Optimizar Plantillas
         </Link>
       </section>
     </div>
@@ -193,8 +209,8 @@ export default async function ReportsPage() {
 
 function MiniStat({ label, value, icon, dark = false }: { label: string, value: string, icon: any, dark?: boolean }) {
     return (
-        <div className={`p-8 rounded-[40px] border shadow-sm space-y-3 transition-all duration-500 ${dark ? 'bg-zinc-950 border-zinc-900 text-white' : 'bg-white border-zinc-100 text-black'}`}>
-            <div className={`flex items-center gap-2 ${dark ? 'text-zinc-600' : 'text-zinc-400'}`}>
+        <div className={`p-8 rounded-[40px] border shadow-sm space-y-3 transition-all duration-500 ${dark ? 'bg-zinc-950 border-zinc-800 text-white shadow-zinc-200' : 'bg-white border-zinc-100 text-black'}`}>
+            <div className={`flex items-center gap-2 ${dark ? 'text-zinc-600' : 'text-zinc-700'}`}>
                 {icon}
                 <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
             </div>

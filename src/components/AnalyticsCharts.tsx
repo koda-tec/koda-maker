@@ -9,10 +9,13 @@ export function MonthlyChart({ data }: { data: any[] }) {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="h-350px w-full bg-gray-50 animate-pulse rounded-[30px]" />;
+  // Usamos h-87.5 que es lo mismo que 350px
+  if (!mounted) {
+    return <div className="h-87.5 w-full bg-gray-50 animate-pulse rounded-[30px]" />;
+  }
 
   return (
-    <div className="h-350px w-full" key={mounted ? 'mounted' : 'not-mounted'}>
+    <div className="h-87.5 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
@@ -20,7 +23,7 @@ export function MonthlyChart({ data }: { data: any[] }) {
             dataKey="name" 
             axisLine={false} 
             tickLine={false} 
-            tick={{ fontSize: 12, fontWeight: '900', fill: '#4b5563' }} // Gris oscuro para que se vea
+            tick={{ fontSize: 12, fontWeight: '900', fill: '#4b5563' }} 
           />
           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#9ca3af' }} />
           <Tooltip 
