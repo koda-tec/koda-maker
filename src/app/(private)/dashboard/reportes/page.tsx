@@ -57,16 +57,19 @@ export default async function ReportsPage() {
   }
 
   // 3. PROCESAR PEDIDOS PARA EL GRÁFICO (Lógica Robusta de Fechas)
-  orders.forEach(order => {
+    orders.forEach(order => {
+    // Creamos un objeto Date a partir del createdAt de la DB
     const orderDate = new Date(order.createdAt);
-    // Usamos getMonth y getFullYear para agrupar
     const m = orderDate.getMonth();
     const y = orderDate.getFullYear();
 
+    // Buscamos si este pedido pertenece a uno de los meses que queremos mostrar
     const match = last6Months.find(item => item.month === m && item.year === y);
     
     if (match) {
-      match.ganancia += (order.totalPrice - order.totalCost);
+      // Sumamos la ganancia (Venta - Costo)
+      const profit = order.totalPrice - order.totalCost;
+      match.ganancia += profit;
       match.ventas += order.totalPrice;
     }
   });
