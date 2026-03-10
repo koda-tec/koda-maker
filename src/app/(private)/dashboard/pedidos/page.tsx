@@ -28,7 +28,7 @@ import { ConfirmOrderModal } from "@/components/ConfirmOrderModal"
 import { EditOrderModal } from "@/components/EditOrderModal"
 import { AddPaymentModal } from "@/components/AddPaymentModal"
 import { SubmitButton } from "@/components/SubmitButton"
-
+export const revalidate = 1; 
 interface PageProps {
   searchParams: Promise<{ search?: string, status?: string }>
 }
@@ -51,25 +51,25 @@ export default async function OrdersPage({ searchParams }: PageProps) {
     prisma.order.findMany({
       where: { 
         userId: user?.id,
-        ...(searchQuery ? { customerName: { contains: searchQuery as string, mode: 'insensitive' } } : {}),
-        ...(statusFilter 
-          ? { status: statusFilter as any } 
-          : { status: { in: ['PRESUPUESTADO', 'CONFIRMADO', 'EN_PROCESO'] } } 
-        ),
+        ...(query.status ? { status: query.status as any } : {}),
+        ...(query.search ? { customerName: { contains: query.search as string, mode: 'insensitive' } } : {}),
       },
       include: { 
         items: { include: { template: true } }, 
-        payments: true,
+        payments: true, 
         images: true 
       },
+      // ESTO ES CLAVE: Hace que la base de datos trabaje más rápido
+      // (Disponible en Prisma 5.10+)
+      //@ts-ignore 
+      relationLoadStrategy: 'join', 
       orderBy: { createdAt: "desc" }
     }),
     prisma.productTemplate.findMany({
       where: { userId: user?.id },
       orderBy: { name: "asc" }
     })
-  ])
-
+])
   return (
     <div className="max-w-6xl mx-auto space-y-12 pb-32 pt-6 px-2 md:px-4">
       

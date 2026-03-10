@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server"
 import { Plus, Ruler, Clock, Tag, Trash2  } from "lucide-react"
 import { createTemplate, deleteTemplate  } from "./actions"
 import Link from "next/link";
+export const revalidate = 1; 
 
 export default async function TemplatesPage() {
   const supabase = await createClient()

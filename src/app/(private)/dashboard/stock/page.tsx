@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { createClient } from "@/lib/supabase-server"
 import { Plus, AlertTriangle, Package, Trash2, Pencil } from "lucide-react"
 import { addMaterial, deleteMaterial } from "./actions"
+export const revalidate = 1; 
 
 export default async function StockPage() {
   const supabase = await createClient()

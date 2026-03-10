@@ -12,6 +12,7 @@ import {
   ArrowRight
 } from "lucide-react"
 import Link from "next/link"
+export const revalidate = 1; 
 
 export default async function DashboardPage() {
   const supabase = await createClient()
