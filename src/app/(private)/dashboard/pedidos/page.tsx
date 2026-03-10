@@ -33,39 +33,38 @@ interface PageProps {
 
 export default async function OrdersPage({ searchParams }: PageProps) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
   
-  // Resolvemos los parámetros de búsqueda (Filtros)
-  const query = await searchParams
-  const statusFilter = query.status
-  const searchQuery = query.search
+  // LANZAMOS TODAS LAS PETICIONES EN PARALELO (Sin esperar una a la otra)
+  const [userRes, queryParams] = await Promise.all([
+    supabase.auth.getUser(),
+    searchParams
+  ])
 
-  // 1. OBTENER PEDIDOS CON LÓGICA DE ARCHIVO
-  // Si no hay filtro, mostramos solo los activos (Presupuestos y Confirmados)
-  // Lo entregado solo se ve si se entra a la pestaña específica
-  const orders = await prisma.order.findMany({
-    where: { 
-      userId: user?.id,
-      ...(searchQuery ? { customerName: { contains: searchQuery, mode: 'insensitive' } } : {}),
-      ...(statusFilter 
-        ? { status: statusFilter as any } 
-        : { status: { in: ['PRESUPUESTADO', 'CONFIRMADO', 'EN_PROCESO'] } } 
-      ),
-    },
-    include: { 
-      items: { include: { template: true } }, 
-      payments: true,
-      images: true 
-    },
-    orderBy: { createdAt: "desc" }
-  })
+  const user = userRes.data.user
+  const statusFilter = queryParams.status
+  const searchQuery = queryParams.search
 
-  // 2. Obtener plantillas para el selector del formulario
-  const templates = await prisma.productTemplate.findMany({
-    where: { userId: user?.id },
-    orderBy: { name: "asc" }
-  })
+  // Ejecutamos las consultas de base de datos también en paralelo
+  const [orders, templates] = await Promise.all([
+    prisma.order.findMany({
+      where: { 
+        userId: user?.id,
+        ...(searchQuery ? { customerName: { contains: searchQuery as string, mode: 'insensitive' } } : {}),
+        ...(statusFilter 
+          ? { status: statusFilter as any } 
+          : { status: { in: ['PRESUPUESTADO', 'CONFIRMADO', 'EN_PROCESO'] } } 
+        ),
+      },
+      include: { items: { include: { template: true } }, payments: true, images: true },
+      orderBy: { createdAt: "desc" }
+    }),
+    prisma.productTemplate.findMany({
+      where: { userId: user?.id },
+      orderBy: { name: "asc" }
+    })
+  ])
 
+  // EL RESTO DEL RETURN QUEDA IGUAL...
   return (
     <div className="max-w-6xl mx-auto space-y-12 pb-32 pt-6 px-2 md:px-4">
       
