@@ -17,31 +17,38 @@ export function EditOrderModal({ order }: { order: any }) {
     )
 
     return (
-        /* El bottom-20 asegura que el modal termine antes que el Navbar */
-        <div className="fixed top-0 left-0 right-0 bottom-20 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
-            {/* max-h-[85vh] para que el modal no sea tan alto y bg-white sólido para evitar transparencias */}
-            <div className="bg-white w-full max-w-2xl rounded-[40px] p-6 md:p-10 shadow-2xl flex flex-col max-h-full border border-zinc-200">
+        <div className="fixed inset-0 z-90 flex items-end justify-center">
+            {/* Fondo oscuro casi opaco para anular las tarjetas de fondo */}
+            <div className="absolute inset-0 bg-zinc-950/95 backdrop-blur-md" onClick={() => setIsOpen(false)} />
+
+            {/* Modal: Fondo blanco sólido, margen inferior de 80px (mb-20) para no tapar el nav */}
+            <div className="bg-white w-full max-w-2xl rounded-t-[50px] shadow-2xl flex flex-col relative z-10 mb-20 border-t border-zinc-200 overflow-hidden animate-in slide-in-from-bottom duration-300 max-h-[85vh]">
                 
-                <div className="flex justify-between items-center border-b border-zinc-100 pb-4 mb-6">
-                    <h3 className="font-black uppercase text-xl text-black">Editar Pedido</h3>
-                    <button onClick={() => setIsOpen(false)} className="p-3 bg-zinc-100 rounded-full"><X size={20}/></button>
+                {/* Header fijo del modal */}
+                <div className="p-8 border-b border-zinc-100 flex justify-between items-center bg-white">
+                    <h3 className="font-black uppercase text-xl text-black tracking-tighter">Editar Pedido</h3>
+                    <button onClick={() => setIsOpen(false)} className="p-3 bg-zinc-100 rounded-full text-zinc-600"><X size={20}/></button>
                 </div>
 
-                {/* Contenedor del Formulario con SCROLL INTERNO */}
-                <form action={async (formData) => { await updateOrder(order.id, formData); setIsOpen(false); }} encType="multipart/form-data" className="flex-1 overflow-y-auto pr-2 space-y-8 no-scrollbar text-left">
+                {/* Formulario con su propio scroll interno */}
+                <form 
+                    action={async (formData) => { await updateOrder(order.id, formData); setIsOpen(false); }} 
+                    encType="multipart/form-data" 
+                    className="flex-1 overflow-y-auto p-8 pt-2 space-y-8 no-scrollbar text-left bg-white"
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Cliente</label>
-                                <input name="customerName" defaultValue={order.customerName} className="w-full p-4 bg-zinc-100 rounded-2xl outline-none font-bold text-black border-none" />
+                                <input name="customerName" defaultValue={order.customerName} className="w-full p-4 bg-zinc-50 rounded-2xl outline-none font-bold text-black border border-zinc-100" />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">WhatsApp</label>
-                                <input name="customerPhone" defaultValue={order.customerPhone} className="w-full p-4 bg-zinc-100 rounded-2xl outline-none font-bold text-black border-none" />
+                                <input name="customerPhone" defaultValue={order.customerPhone} className="w-full p-4 bg-zinc-50 rounded-2xl outline-none font-bold text-black border border-zinc-100" />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Instrucciones</label>
-                                <textarea name="designDetails" defaultValue={order.designDetails} className="w-full p-4 bg-zinc-100 rounded-2xl outline-none text-sm h-32 text-black border-none resize-none" />
+                                <textarea name="designDetails" defaultValue={order.designDetails} className="w-full p-4 bg-zinc-50 rounded-2xl outline-none text-sm h-32 text-black border border-zinc-100 resize-none" />
                             </div>
                         </div>
 
@@ -66,27 +73,24 @@ export function EditOrderModal({ order }: { order: any }) {
                     </div>
 
                     <div className="border-t border-zinc-100 pt-6">
-                        <p className="text-[10px] font-black uppercase text-zinc-400 mb-4 tracking-widest">Fotos (Toca para borrar)</p>
+                        <p className="text-[10px] font-black uppercase text-zinc-400 mb-4 tracking-widest">Fotos cargadas (Toca para borrar)</p>
                         <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                             {order.images.map((img: any) => (
-                                <div key={img.id} className="relative flex-none w-24 h-24 rounded-2xl overflow-hidden group border-2 border-zinc-100">
+                                <div key={img.id} className="relative flex-none w-28 h-28 rounded-3xl overflow-hidden group border-2 border-zinc-100">
                                     <img src={img.url} className="w-full h-full object-cover" alt="Diseño" />
-                                    <button type="button" onClick={() => deleteOrderImage(img.id, img.url)} className="absolute inset-0 bg-red-500/80 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={20}/></button>
+                                    <button type="button" onClick={() => deleteOrderImage(img.id, img.url)} className="absolute inset-0 bg-red-500/80 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={24}/></button>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </form>
 
-                {/* Botón Guardar siempre visible al pie del modal */}
-                <div className="pt-6 border-t border-zinc-100">
-                    <button type="submit" onClick={(e) => {
-                        const form = e.currentTarget.closest('div')?.parentElement?.querySelector('form');
-                        if (form) form.requestSubmit();
-                    }} className="w-full p-5 bg-black text-white rounded-[25px] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-                        <Save size={18}/> Guardar Cambios
-                    </button>
-                </div>
+                    {/* Botón de envío al final del scroll */}
+                    <div className="pb-10">
+                        <button type="submit" className="w-full p-6 bg-black text-white rounded-[30px] font-black uppercase tracking-widest shadow-2xl flex items-center justify-center gap-3 hover:bg-[#f13d4b] active:scale-95 transition-all">
+                            <Save size={20}/> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     )
