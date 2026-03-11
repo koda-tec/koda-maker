@@ -25,7 +25,7 @@ export async function registerPurchase(formData: FormData) {
             }
         })
 
-        // 2. Actualizar el material (Suma stock y cambia precio base)
+        // 2. Actualizar el material (Suma stock y cambia precio)
         await tx.material.update({
             where: { id: materialId },
             data: {
@@ -34,34 +34,23 @@ export async function registerPurchase(formData: FormData) {
             }
         })
 
-        // 3. RECALCULAR COSTOS DE PEDIDOS PENDIENTES
+        // 3. Actualizar costos de pedidos pendientes
         const pendingOrders = await tx.order.findMany({
             where: { 
                 userId: user.id,
                 status: { in: ['PRESUPUESTADO', 'CONFIRMADO', 'EN_PROCESO'] }
             },
-            include: { 
-                items: { 
-                    include: { 
-                        template: { 
-                            include: { materials: true } 
-                        } 
-                    } 
-                } 
-            }
+            include: { items: { include: { template: { include: { materials: true } } } } }
         })
 
         for (const order of pendingOrders) {
             let newTotalCost = 0
             for (const item of order.items) {
-                const itemQuantity = item.quantity
                 for (const tm of item.template.materials) {
-                    // Buscamos el precio que acabamos de actualizar u otros precios vigentes
                     const mat = await tx.material.findUnique({ where: { id: tm.materialId } })
-                    newTotalCost += (tm.quantity * (mat?.unitPrice || 0) * itemQuantity)
+                    newTotalCost += (tm.quantity * (mat?.unitPrice || 0) * item.quantity)
                 }
             }
-
             await tx.order.update({
                 where: { id: order.id },
                 data: { totalCost: newTotalCost }
@@ -69,7 +58,9 @@ export async function registerPurchase(formData: FormData) {
         }
     })
 
-    revalidatePath("/dashboard/inversion")
+    // Forzamos el refresco de todas las rutas clave
     revalidatePath("/dashboard/stock")
+    revalidatePath("/dashboard/inversion")
+    revalidatePath("/dashboard/pedidos")
     revalidatePath("/dashboard/reportes")
 }

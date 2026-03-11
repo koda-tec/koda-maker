@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
 import { createClient } from "@/lib/supabase-server"
-import { Wallet, ArrowDownCircle, BarChart3, TrendingDown, Landmark, Plus, ShoppingBag } from "lucide-react"
+import { Wallet, ArrowDownCircle, BarChart3, Landmark, ShoppingBag, History } from "lucide-react"
 import { registerPurchase } from "./actions"
 import { SubmitButton } from "@/components/SubmitButton"
 
@@ -24,95 +24,111 @@ export default async function InversionPage() {
   const stockValue = materials.reduce((acc, m) => acc + (m.stock * m.unitPrice), 0)
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12 pb-32 pt-8 px-4">
-      <header>
-        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.4em] mb-1 italic">Finanzas</h1>
-        <h2 className="text-5xl font-black text-black tracking-tighter uppercase leading-none">Inversión</h2>
+    <div className="max-w-5xl mx-auto space-y-10 pb-32 pt-6 px-2 md:px-4">
+      <header className="px-2">
+        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.4em] mb-1 italic">Capital y Compras</h1>
+        <h2 className="text-4xl font-black text-black tracking-tighter uppercase">Inversión</h2>
       </header>
 
-      {/* FORMULARIO DE NUEVA COMPRA */}
-      <section className="bg-white p-8 md:p-12 rounded-[45px] shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-8">
-            <div className="w-2 h-6 bg-black rounded-full" />
-            <h3 className="font-black uppercase text-sm tracking-widest text-zinc-800">Registrar Nueva Compra</h3>
+      {/* FORMULARIO RESPONSIVE */}
+      <section className="bg-white p-6 md:p-10 rounded-[40px] shadow-sm border border-gray-100 mx-2 md:mx-0">
+        <div className="flex items-center gap-2 mb-8">
+            <div className="w-1.5 h-6 bg-black rounded-full" />
+            <h3 className="font-black uppercase text-xs tracking-widest text-zinc-800">Cargar Nueva Compra</h3>
         </div>
 
         <form action={registerPurchase} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Material Comprado</label>
-                    <select name="materialId" className="w-full p-5 bg-zinc-50 border-none rounded-[25px] font-bold outline-none focus:ring-2 focus:ring-[#f13d4b] appearance-none" required>
-                        <option value="">Seleccionar material...</option>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Material</label>
+                    <select name="materialId" className="w-full p-4 bg-zinc-50 border-none rounded-2xl font-bold outline-none focus:ring-2 focus:ring-[#f13d4b] appearance-none" required>
+                        <option value="">Seleccionar...</option>
                         {materials.map(m => (
-                            <option key={m.id} value={m.id}>{m.name} (Actual: ${m.unitPrice})</option>
+                            <option key={m.id} value={m.id}>{m.name} (${m.unitPrice})</option>
                         ))}
                     </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Cantidad</label>
-                        <input name="quantity" type="number" step="0.01" placeholder="0" className="w-full p-5 bg-zinc-50 border-none rounded-[25px] font-bold outline-none" required />
+                        <input name="quantity" type="number" step="0.01" placeholder="0" className="w-full p-4 bg-zinc-50 border-none rounded-2xl font-bold outline-none" required />
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Nuevo Precio Unit.</label>
-                        <input name="unitPrice" type="number" step="0.01" placeholder="$" className="w-full p-5 bg-zinc-50 border-none rounded-[25px] font-bold outline-none" required />
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Precio Unit. $</label>
+                        <input name="unitPrice" type="number" step="0.01" placeholder="$" className="w-full p-4 bg-zinc-50 border-none rounded-2xl font-bold outline-none" required />
                     </div>
                 </div>
             </div>
-            <SubmitButton label="Registrar Inversión" />
+            <SubmitButton label="Registrar Compra" />
         </form>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-black rounded-[50px] p-10 text-white shadow-2xl relative overflow-hidden">
+      {/* CARDS DE TOTALES */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-2 md:px-0">
+        <div className="bg-black rounded-[45px] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden">
             <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest mb-4">Total Invertido Histórico</p>
-            <h3 className="text-6xl font-black tracking-tighter">${totalInvested.toLocaleString('es-AR')}</h3>
-            <div className="mt-8 flex items-center gap-3 text-zinc-400 text-xs font-bold">
-                <ShoppingBag size={18} /> <span>Capital total destinado a compras</span>
-            </div>
-            <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-[#f13d4b] rounded-full blur-[90px] opacity-20" />
+            <h3 className="text-4xl md:text-5xl font-black tracking-tighter leading-none">${totalInvested.toLocaleString('es-AR')}</h3>
+            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#f13d4b] rounded-full blur-[80px] opacity-20" />
         </div>
 
-        <div className="bg-white rounded-[50px] p-10 border-2 border-zinc-100 shadow-sm flex flex-col justify-between">
+        <div className="bg-white rounded-[45px] p-8 md:p-10 border-2 border-zinc-100 shadow-sm flex flex-col justify-between">
             <div>
                 <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest mb-4">Valor Patrimonial del Stock</p>
-                <h3 className="text-6xl font-black text-black tracking-tighter">${stockValue.toLocaleString('es-AR')}</h3>
+                <h3 className="text-4xl md:text-5xl font-black text-black tracking-tighter leading-none">${stockValue.toLocaleString('es-AR')}</h3>
             </div>
-            <div className="mt-8 flex items-center gap-3 text-green-600 text-xs font-bold bg-green-50 p-4 rounded-3xl">
-                <Landmark size={20} /> <span>Dinero disponible en materiales a precio de hoy</span>
+            <div className="mt-6 flex items-center gap-2 text-green-600 text-[10px] font-black uppercase bg-green-50 p-3 rounded-2xl w-fit">
+                <Landmark size={14} /> <span>Capital en materiales hoy</span>
             </div>
         </div>
       </div>
 
+      {/* HISTORIAL: Tabla en PC, Cards en Móvil */}
       <section className="space-y-6">
-        <h3 className="font-black uppercase text-sm tracking-widest ml-6 italic">Últimos Movimientos</h3>
-        <div className="bg-white rounded-[45px] border border-zinc-100 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="bg-zinc-50 border-b border-zinc-100">
-                            <th className="p-8 text-[10px] font-black uppercase text-zinc-400">Fecha</th>
-                            <th className="p-8 text-[10px] font-black uppercase text-zinc-400">Insumo</th>
-                            <th className="p-8 text-[10px] font-black uppercase text-zinc-400">Cantidad</th>
-                            <th className="p-8 text-[10px] font-black uppercase text-zinc-400 text-right">Monto Total</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-50">
-                        {purchases.map((p) => (
-                            <tr key={p.id} className="hover:bg-zinc-50/50 transition-colors group">
-                                <td suppressHydrationWarning className="p-8 text-sm font-bold text-zinc-400">{new Date(p.createdAt).toLocaleDateString()}</td>
-                                <td className="p-8 text-sm font-black uppercase tracking-tighter text-black">{p.material.name}</td>
-                                <td className="p-8 text-sm font-bold text-zinc-500">{p.quantity} {p.material.unit}</td>
-                                <td className="p-8 text-lg font-black text-right text-black group-hover:text-[#f13d4b] transition-colors">${p.totalAmount.toLocaleString('es-AR')}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            {purchases.length === 0 && (
-                <div className="py-20 text-center text-zinc-300 font-bold uppercase text-xs tracking-widest">No hay compras registradas</div>
-            )}
+        <h3 className="font-black uppercase text-xs tracking-widest ml-6 flex items-center gap-2">
+            <History size={16} className="text-[#f13d4b]" /> Últimos Movimientos
+        </h3>
+        
+        {/* VISTA MÓVIL (Cards) */}
+        <div className="md:hidden space-y-4 px-2">
+            {purchases.map((p) => (
+                <div key={p.id} className="bg-white p-6 rounded-[35px] border border-zinc-100 shadow-sm space-y-3">
+                    <div className="flex justify-between items-start">
+                        <span suppressHydrationWarning className="text-[10px] font-black text-zinc-300 uppercase">{new Date(p.createdAt).toLocaleDateString()}</span>
+                        <span className="text-lg font-black text-black">${p.totalAmount.toLocaleString('es-AR')}</span>
+                    </div>
+                    <p className="font-black uppercase text-sm tracking-tight">{p.material.name}</p>
+                    <p className="text-[10px] font-bold text-zinc-400">CANTIDAD: {p.quantity} {p.material.unit} x ${p.unitPrice}</p>
+                </div>
+            ))}
         </div>
+
+        {/* VISTA DESKTOP (Tabla) */}
+        <div className="hidden md:block bg-white rounded-[45px] border border-zinc-100 overflow-hidden shadow-sm">
+            <table className="w-full text-left">
+                <thead>
+                    <tr className="bg-zinc-50 border-b border-zinc-100">
+                        <th className="p-8 text-[10px] font-black uppercase text-zinc-400">Fecha</th>
+                        <th className="p-8 text-[10px] font-black uppercase text-zinc-400">Material</th>
+                        <th className="p-8 text-[10px] font-black uppercase text-zinc-400">Cantidad</th>
+                        <th className="p-8 text-[10px] font-black uppercase text-zinc-400 text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-50">
+                    {purchases.map((p) => (
+                        <tr key={p.id} className="hover:bg-zinc-50/50 transition-colors group">
+                            <td suppressHydrationWarning className="p-8 text-sm font-bold text-zinc-400">{new Date(p.createdAt).toLocaleDateString()}</td>
+                            <td className="p-8 text-sm font-black uppercase text-black">{p.material.name}</td>
+                            <td className="p-8 text-sm font-bold text-zinc-500">{p.quantity} {p.material.unit}</td>
+                            <td className="p-8 text-lg font-black text-right text-black group-hover:text-[#f13d4b] transition-colors">${p.totalAmount.toLocaleString('es-AR')}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+
+        {purchases.length === 0 && (
+            <div className="py-20 text-center text-zinc-300 font-bold uppercase text-xs">No hay compras registradas</div>
+        )}
       </section>
     </div>
   )
