@@ -63,3 +63,68 @@ export async function updateMaterial(id: string, formData: FormData) {
 
   revalidatePath("/dashboard/stock")
 }
+
+export async function registerPurchase(formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const materialId = formData.get("materialId") as string
+    const quantity = parseFloat(formData.get("quantity") as string)
+    const newUnitPrice = parseFloat(formData.get("unitPrice") as string)
+    const totalAmount = quantity * newUnitPrice
+
+    await prisma.$transaction(async (tx) => {
+        // 1. Registrar la compra (Inversión)
+        await tx.purchase.create({
+            data: {
+                materialId,
+                quantity,
+                unitPrice: newUnitPrice,
+                totalAmount,
+                userId: user.id
+            }
+        })
+
+        // 2. Actualizar el material (Nuevo precio y sumar stock)
+        await tx.material.update({
+            where: { id: materialId },
+            data: {
+                unitPrice: newUnitPrice,
+                stock: { increment: quantity }
+            }
+        })
+
+        // 3. ACTUALIZAR COSTOS DE PEDIDOS PENDIENTES
+        // Buscamos pedidos que no estén entregados
+        const pendingOrders = await tx.order.findMany({
+            where: { 
+                userId: user.id,
+                status: { in: ['PRESUPUESTADO', 'CONFIRMADO', 'EN_PROCESO'] }
+            },
+            include: { items: { include: { template: { include: { materials: true } } } } }
+        })
+
+        for (const order of pendingOrders) {
+            // Recalculamos el costo total del pedido con los precios nuevos de los materiales
+            let newTotalCost = 0
+            for (const item of order.items) {
+                const itemQuantity = item.quantity
+                for (const tm of item.template.materials) {
+                    // Buscamos el precio actualizado del material
+                    const mat = await tx.material.findUnique({ where: { id: tm.materialId } })
+                    newTotalCost += (tm.quantity * (mat?.unitPrice || 0) * itemQuantity)
+                }
+            }
+
+            await tx.order.update({
+                where: { id: order.id },
+                data: { totalCost: newTotalCost }
+            })
+        }
+    })
+
+    revalidatePath("/dashboard/stock")
+    revalidatePath("/dashboard/pedidos")
+    revalidatePath("/dashboard/reportes")
+}

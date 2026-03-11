@@ -23,7 +23,24 @@ model User {
   materials     Material[]
   templates     ProductTemplate[]
   orders        Order[]
+  purchases     Purchase[] 
+
 }
+
+model Purchase {
+  id          String   @id @default(cuid())
+  quantity    Float    
+  unitPrice   Float    
+  totalAmount Float    
+  createdAt   DateTime @default(now())
+
+  materialId  String
+  material    Material @relation(fields: [materialId], references: [id])
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
 
 // --- MATERIALES ---
 
@@ -42,6 +59,7 @@ model Material {
   
   // Relación con Plantillas
   templates    TemplateMaterial[]
+  purchases    Purchase[]
 }
 
 // --- PLANTILLAS DE PRODUCTOS (Recetas) ---
