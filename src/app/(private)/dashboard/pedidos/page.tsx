@@ -152,18 +152,31 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-[#f13d4b] ml-2 italic">Seña Recibida ($)</label>
-                    <input name="deposit" type="number" step="0.01" placeholder="0.00" className="w-full p-4 bg-red-50 text-[#f13d4b] border border-red-100 rounded-2xl outline-none text-sm font-black placeholder:text-red-200" />
-                </div>
-                <div className="space-y-1">
-                    <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Estado Inicial</label>
-                    <select name="status" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none text-[#f13d4b] cursor-pointer">
-                        <option value="CONFIRMADO">✓ CONFIRMADO</option>
-                        <option value="PRESUPUESTADO">? PRESUPUESTO</option>
-                    </select>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-[#f13d4b] ml-2 italic tracking-widest">
+                Seña Recibida ($)
+                </label>
+                <input 
+                name="deposit" 
+                type="number" 
+                step="0.01" 
+                placeholder="0.00" 
+                className="w-full p-4 bg-red-50 text-[#f13d4b] rounded-2xl font-black border-none outline-none focus:ring-2 focus:ring-[#f13d4b] h-14" 
+                />
+            </div>
+            <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase text-gray-400 ml-2 tracking-widest">
+                Estado Inicial
+                </label>
+                <select 
+                name="status" 
+                className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none outline-none focus:ring-2 focus:ring-[#f13d4b] h-14 cursor-pointer"
+                >
+                <option value="CONFIRMADO">✓ CONFIRMADO</option>
+                <option value="PRESUPUESTADO">? PRESUPUESTO</option>
+                </select>
+            </div>
             </div>
 
             <SubmitButton label="Registrar Operación" />
@@ -255,43 +268,48 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         )}
                     </div>
 
+                    {/* SECCIÓN FINANCIERA CORREGIDA */}
                     <div className="space-y-6">
-                        <div className="flex justify-between items-end border-b border-gray-100 pb-4 px-2">
-                            <div>
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Fecha Entrega</p>
-                                <p suppressHydrationWarning className="text-xl font-black uppercase flex items-center gap-2 italic">
-                                    <Calendar size={18} className="text-[#f13d4b]" />
-                                    {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('es-AR', {day:'2-digit', month:'short'}) : "PENDIENTE"}
-                                </p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total a cobrar</p>
-                                <p className="text-4xl font-black tracking-tighter">${order.totalPrice.toFixed(2)}</p>
-                            </div>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-gray-100 pb-4 px-2 gap-4">
+                        <div className="flex-1">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-2">Fecha Entrega</p>
+                        <div className="flex items-center gap-2">
+                            <Calendar size={18} className="text-[#f13d4b]" />
+                            <p suppressHydrationWarning className="text-xl font-black uppercase italic text-black whitespace-nowrap">
+                            {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('es-AR', {day:'2-digit', month:'short'}) : "PENDIENTE"}
+                            </p>
                         </div>
+                        </div>
+                        <div className="flex-1 text-left sm:text-right w-full">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total a cobrar</p>
+                        <p className="text-4xl font-black tracking-tighter text-black leading-none whitespace-nowrap">
+                            ${order.totalPrice.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </p>
+                        </div>
+                    </div>
 
-                        {/* BARRA DE PROGRESO DE COBRO */}
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-end px-1">
-                                <span className="text-[10px] font-black uppercase text-gray-400">Estado financiero</span>
-                                {remaining > 0 && !isDelivered && (
-                                    <AddPaymentModal orderId={order.id} remaining={remaining} />
-                                )}
-                            </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center px-1">
-                                    <span suppressHydrationWarning className={`text-[10px] font-black px-3 py-1 rounded-full ${remaining <= 0 ? 'bg-green-500 text-white' : 'bg-[#f13d4b] text-white'}`}>
-                                        {remaining <= 0 ? 'COBRADO TOTAL' : `FALTA $${remaining.toFixed(2)}`}
-                                    </span>
-                                </div>
-                                <div className="w-full h-4 bg-gray-100 rounded-full overflow-hidden shadow-inner">
-                                    <div 
-                                        className="bg-green-500 h-full transition-all duration-1000"
-                                        style={{ width: `${Math.min(((order.totalPrice - remaining) / order.totalPrice) * 100, 100)}%` }}
-                                    />
-                                </div>
-                            </div>
+                    {/* BARRA DE PROGRESO DE COBRO */}
+                    <div className="space-y-4 bg-gray-50/50 p-4 rounded-3xl border border-gray-50">
+                        <div className="flex justify-between items-center px-1 gap-2">
+                        <span className="text-[10px] font-black uppercase text-gray-400">Estado financiero</span>
+                        {remaining > 0 && !isDelivered && (
+                            <AddPaymentModal orderId={order.id} remaining={remaining} />
+                        )}
                         </div>
+                        <div className="space-y-2">
+                        <div className="flex justify-between items-center px-1">
+                            <span suppressHydrationWarning className={`text-[10px] font-black px-3 py-1 rounded-full ${remaining <= 0 ? 'bg-green-500 text-white' : 'bg-[#f13d4b] text-white shadow-sm'}`}>
+                            {remaining <= 0 ? '✓ COBRADO TOTAL' : `FALTA $${remaining.toLocaleString('es-AR')}`}
+                            </span>
+                        </div>
+                        <div className="w-full h-4 bg-gray-200/50 rounded-full overflow-hidden shadow-inner">
+                            <div 
+                            className="bg-green-500 h-full transition-all duration-1000 ease-out"
+                            style={{ width: `${Math.min(((order.totalPrice - remaining) / order.totalPrice) * 100, 100)}%` }}
+                            />
+                        </div>
+                        </div>
+                    </div>
                     </div>
 
                     {/* ACCIONES FINALES */}

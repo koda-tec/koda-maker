@@ -46,7 +46,7 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     )
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-110 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-100 flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
                 
                 {/* HEADER DEL MODAL */}
