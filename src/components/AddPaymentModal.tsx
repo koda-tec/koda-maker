@@ -13,14 +13,13 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isPending, startTransition] = useTransition()
 
-    // EFECTO: Bloquea el scroll de la página de fondo cuando el modal se abre
+    // Bloquea el scroll del fondo cuando el modal está abierto
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden'
         } else {
             document.body.style.overflow = 'unset'
         }
-        // Limpieza por si el componente se desmonta inesperadamente
         return () => { document.body.style.overflow = 'unset' }
     }, [isOpen])
 
@@ -28,25 +27,21 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
         const amount = formData.get("amount")
         
         if (!amount || parseFloat(amount as string) <= 0) {
-            toast.error("Monto inválido", { description: "Ingresá un valor mayor a 0." })
+            toast.error("Monto inválido")
             return
         }
 
-        // startTransition permite que la UI responda instantáneamente
         startTransition(async () => {
             try {
                 await addPayment(orderId, formData)
-                toast.success("Pago registrado", { 
-                    description: `Se sumaron $${parseFloat(amount as string).toLocaleString()} al pedido.` 
-                })
+                toast.success("Pago registrado con éxito")
                 setIsOpen(false)
             } catch (error) {
-                toast.error("Error al registrar", { description: "No se pudo conectar con el servidor." })
+                toast.error("Error al registrar el pago")
             }
         })
     }
 
-    // BOTÓN QUE SE VE EN LA TARJETA DEL PEDIDO
     if (!isOpen) return (
         <button 
             onClick={() => setIsOpen(true)} 
@@ -57,13 +52,22 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     )
 
     return (
-        /* FONDO OSCURO: z-[999] para que esté arriba de la navegación. bg-black/95 para cero transparencia */
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-999 flex items-center justify-center p-4 overflow-hidden">
+        /* 
+           FONDO (Backdrop): 
+           - fixed inset-x-0 top-0: Cubre desde arriba hasta los lados.
+           - bottom-20: Deja libre el espacio del Navbar (80px).
+           - z-[80]: Suficiente para estar arriba de las tarjetas (z-0) pero debajo del Nav (z-100).
+        */
+        <div className="fixed inset-x-0 top-0 bottom-20 bg-black/60 backdrop-blur-sm z-80 flex items-center justify-center p-4 overflow-hidden">
             
-            {/* CONTENEDOR BLANCO DEL MODAL: max-h-[90vh] para que no se salga de la pantalla en móviles chicos */}
-            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto border border-zinc-200">
+            {/* 
+                CONTENEDOR DEL MODAL:
+                - bg-white (SÓLIDO): Evita que se vea el fondo.
+                - overflow-y-auto: Permite scroll si el contenido es largo.
+            */}
+            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-[0_0_50px_rgba(0,0,0,0.3)] space-y-6 animate-in zoom-in-95 duration-200 max-h-full overflow-y-auto border border-zinc-200 relative">
                 
-                {/* CABECERA */}
+                {/* BOTÓN CERRAR */}
                 <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
                     <h3 className="font-black uppercase text-xs tracking-widest text-zinc-500 italic underline decoration-[#f13d4b] decoration-2">Nuevo Cobro</h3>
                     <button 
@@ -74,18 +78,18 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                     </button>
                 </div>
 
-                {/* VISUALIZACIÓN DE SALDO ACTUAL */}
+                {/* INFO DE SALDO */}
                 <div className="text-center bg-zinc-50 p-6 rounded-[30px] border border-zinc-100 shadow-inner">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo pendiente por cobrar</p>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo Pendiente</p>
                     <p className="text-4xl font-black text-black tracking-tighter italic tabular-nums">
                         ${remaining.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </p>
                 </div>
 
-                {/* FORMULARIO DE PAGO */}
+                {/* FORMULARIO */}
                 <form action={handleSubmit} className="space-y-5 text-left">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Monto a Entregar ($)</label>
+                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Monto a Entregar</label>
                         <input 
                             name="amount" 
                             type="number" 
@@ -99,7 +103,7 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Método utilizado</label>
+                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Método</label>
                         <select 
                             name="method" 
                             className="w-full p-4 bg-zinc-50 rounded-2xl text-[11px] font-black uppercase border-none outline-none cursor-pointer text-zinc-800 shadow-sm appearance-none"
@@ -123,12 +127,12 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                             {isPending ? (
                                 <>
                                     <Loader2 className="animate-spin" size={18} />
-                                    Procesando...
+                                    PROCESANDO...
                                 </>
                             ) : (
                                 <>
                                     <Check size={18} strokeWidth={3} />
-                                    Confirmar Pago
+                                    CONFIRMAR PAGO
                                 </>
                             )}
                         </button>

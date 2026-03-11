@@ -16,7 +16,7 @@ export function Navigation() {
   const pathname = usePathname()
 
   return (
-        <nav className="fixed bottom-0 left-0 z-10 w-full h-20 bg-white border-t border-gray-100 px-6 pb-4 md:top-0 md:left-0 md:w-20 md:h-screen md:border-t-0 md:border-r md:flex-col md:py-8 md:px-0">      <div className="flex h-full items-center justify-between md:flex-col md:gap-8">
+        <nav className="fixed bottom-0 left-0 z-100 w-full h-20 bg-white border-t border-gray-100 px-6 pb-4 md:top-0 md:left-0 md:w-20 md:h-screen md:border-t-0 md:border-r md:flex-col md:py-8 md:px-0">      <div className="flex h-full items-center justify-between md:flex-col md:gap-8">
         {/* Logo en PC */}
         <div className="hidden md:flex w-10 h-10 bg-black rounded-xl items-center justify-center mb-4">
           <span className="text-white font-black">K</span>
