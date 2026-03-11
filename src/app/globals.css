@@ -1,15 +1,13 @@
-@import "tailwind.css";
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #f13d4b;
+  --color-accent-foreground: #ffffff;
+}
 
 :root {
-  /* Paleta KODA MAKER */
   --background: #ffffff;
   --foreground: #09090b;
-  --primary: #000000;
-  --primary-foreground: #ffffff;
-  --accent: #f13d4b; /* El rojo de Koda */
-  --accent-foreground: #ffffff;
-  --card: #ffffff;
-  --border: #f4f4f5;
 }
 
 @layer base {
@@ -18,11 +16,10 @@
     overscroll-behavior-y: none;
     /* Evita el resaltado azul al tocar */
     -webkit-tap-highlight-color: transparent;
-    /* Evita selección de texto en botones/menús para que parezca App */
+    /* Evita selección de texto en botones para que parezca App */
     user-select: none;
-    background-color: var(--background);
-    color: var(--foreground);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    background-color: white;
+    color: black;
   }
 
   /* Permitir selección solo en campos de texto */
@@ -31,11 +28,11 @@
   }
 }
 
-/* Ocultar scrollbars pero mantener funcionalidad */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
+/* Utilidad para ocultar scrollbars */
+@utility no-scrollbar {
   scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
