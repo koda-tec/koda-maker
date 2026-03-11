@@ -3,6 +3,7 @@ import { useState, useTransition, useEffect } from "react"
 import { DollarSign, X, Check, Loader2 } from "lucide-react"
 import { addPayment } from "@/app/(private)/dashboard/pedidos/actions"
 import { toast } from "sonner"
+import Portal from "./Portal" // Asegúrate de haber creado este archivo
 
 interface AddPaymentModalProps {
     orderId: string
@@ -13,12 +14,39 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isPending, startTransition] = useTransition()
 
+    // 1. BLOQUEO DE SCROLL: Evita que el fondo se mueva mientras el modal está abierto
     useEffect(() => {
-        if (isOpen) document.body.style.overflow = 'hidden'
-        else document.body.style.overflow = 'unset'
+        if (isOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = 'unset'
+        }
         return () => { document.body.style.overflow = 'unset' }
     }, [isOpen])
 
+    const handleSubmit = async (formData: FormData) => {
+        const amount = formData.get("amount")
+        
+        if (!amount || parseFloat(amount as string) <= 0) {
+            toast.error("Monto inválido", { description: "Ingresá un valor mayor a 0." })
+            return
+        }
+
+        // startTransition hace que la UI responda instantáneamente
+        startTransition(async () => {
+            try {
+                await addPayment(orderId, formData)
+                toast.success("Pago registrado", { 
+                    description: `Se sumaron $${parseFloat(amount as string).toLocaleString()} al pedido.` 
+                })
+                setIsOpen(false)
+            } catch (error) {
+                toast.error("Error al registrar", { description: "No se pudo conectar con el servidor." })
+            }
+        })
+    }
+
+    // BOTÓN INICIAL (El que está en la tarjeta)
     if (!isOpen) return (
         <button 
             onClick={() => setIsOpen(true)} 
@@ -29,52 +57,99 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     )
 
     return (
-        /* 
-           BACKDROP (Fondo): 
-           - fixed inset-0: Cubre TODA la pantalla sin importar si es mobile o desktop.
-           - z-[9999]: Un número exagerado para romper cualquier contexto de apilamiento.
-           - bg-zinc-950/95: Casi opaco para que no se vea nada de fondo.
-        */
-        <div className="fixed inset-0 z-9999 flex items-center justify-center p-4 md:p-6 overflow-hidden">
-            <div 
-                className="absolute inset-0 bg-zinc-950/95 backdrop-blur-md" 
-                onClick={() => setIsOpen(false)} 
-            />
-            
-            {/* CONTENEDOR: bg-white SÓLIDO (sin opacidad) */}
-            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 relative z-10000 border border-zinc-200 overflow-y-auto max-h-[90vh]">
+        <Portal>
+            {/* 
+               CONTENEDOR FIJO: z-[9999] para estar por encima de TODO.
+               Usa 'fixed inset-0' para cubrir toda la pantalla.
+            */}
+            <div className="fixed inset-0 z-9999 flex items-center justify-center p-4">
                 
-                <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
-                    <h3 className="font-black uppercase text-xs tracking-widest text-zinc-800 italic underline decoration-[#f13d4b] decoration-2">Nuevo Cobro</h3>
-                    <button onClick={() => setIsOpen(false)} className="p-2 bg-zinc-100 rounded-full text-zinc-600 hover:bg-zinc-200"><X size={20} /></button>
-                </div>
-
-                <div className="text-center bg-zinc-50 p-6 rounded-[30px] border border-zinc-100 shadow-inner">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo Pendiente</p>
-                    <p className="text-4xl font-black text-black tracking-tighter italic tabular-nums">${remaining.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
-                </div>
-
-                <form action={async (formData) => {
-                    startTransition(async () => {
-                        await addPayment(orderId, formData)
-                        toast.success("Pago registrado")
-                        setIsOpen(false)
-                    })
-                }} className="space-y-5 text-left">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Monto a recibir</label>
-                        <input name="amount" type="number" step="0.01" max={remaining} placeholder="0.00" required autoFocus className="w-full p-5 bg-zinc-100 rounded-2xl outline-none font-black text-center text-3xl focus:ring-2 focus:ring-green-500 text-black border-none" />
+                {/* FONDO (BACKDROP): Negro casi total (95%) para anular las tarjetas de fondo */}
+                <div 
+                    className="absolute inset-0 bg-zinc-950/95 backdrop-blur-md" 
+                    onClick={() => !isPending && setIsOpen(false)} 
+                />
+                
+                {/* CAJA DEL MODAL: Blanca sólida y centrada */}
+                <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 animate-in zoom-in-95 duration-200 relative z-10 border border-zinc-200 overflow-y-auto max-h-[90vh] no-scrollbar">
+                    
+                    {/* HEADER */}
+                    <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
+                        <h3 className="font-black uppercase text-xs tracking-widest text-zinc-500 italic underline decoration-[#f13d4b] decoration-2">Nuevo Cobro</h3>
+                        <button 
+                            onClick={() => setIsOpen(false)} 
+                            className="p-2 bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors text-zinc-600"
+                        >
+                            <X size={20} />
+                        </button>
                     </div>
-                    <button type="submit" disabled={isPending} className={`w-full p-5 rounded-[25px] font-black uppercase text-xs flex items-center justify-center gap-3 shadow-lg disabled:opacity-50 ${isPending ? 'bg-zinc-300' : 'bg-green-500 text-white shadow-green-200 active:scale-95'}`}>
-                        {isPending ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} strokeWidth={3} />}
-                        Confirmar Pago
-                    </button>
-                </form>
 
-                <p className="text-[9px] text-center text-zinc-400 font-bold uppercase tracking-[0.3em] pt-2">
-                    Koda Maker System • Gestión de Caja
-                </p>
+                    {/* VISUALIZACIÓN DE SALDO ACTUAL */}
+                    <div className="text-center bg-zinc-50 p-6 rounded-[30px] border border-zinc-100 shadow-inner">
+                        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo pendiente por cobrar</p>
+                        <p suppressHydrationWarning className="text-4xl font-black text-black tracking-tighter italic tabular-nums">
+                            ${remaining.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </p>
+                    </div>
+
+                    {/* FORMULARIO DE PAGO */}
+                    <form action={handleSubmit} className="space-y-5 text-left">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Monto a Entregar ($)</label>
+                            <input 
+                                name="amount" 
+                                type="number" 
+                                step="0.01" 
+                                max={remaining}
+                                placeholder="0.00" 
+                                required
+                                autoFocus
+                                className="w-full p-5 bg-zinc-50 rounded-2xl outline-none font-black text-center text-3xl border-2 border-transparent focus:border-green-500 transition-all text-black shadow-sm"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Método de pago</label>
+                            <select 
+                                name="method" 
+                                className="w-full p-4 bg-zinc-50 rounded-2xl text-[11px] font-black uppercase border-none outline-none cursor-pointer text-zinc-800 shadow-sm appearance-none"
+                            >
+                                <option value="EFECTIVO">💵 Efectivo</option>
+                                <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                                <option value="MERCADO PAGO">💳 Mercado Pago</option>
+                            </select>
+                        </div>
+
+                        <div className="pt-2">
+                            <button 
+                                type="submit" 
+                                disabled={isPending}
+                                className={`w-full p-5 rounded-[25px] font-black uppercase text-xs tracking-[0.2em] shadow-xl flex items-center justify-center gap-3 transition-all duration-300 ${
+                                    isPending 
+                                    ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed' 
+                                    : 'bg-green-500 text-white hover:bg-green-600 active:scale-95 shadow-green-100'
+                                }`}
+                            >
+                                {isPending ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={18} />
+                                        PROCESANDO...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={18} strokeWidth={3} />
+                                        CONFIRMAR PAGO
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+
+                    <p className="text-[9px] text-center text-zinc-400 font-bold uppercase tracking-[0.3em] pt-2">
+                        Koda Maker System • Gestión de Caja
+                    </p>
+                </div>
             </div>
-        </div>
+        </Portal>
     )
 }
