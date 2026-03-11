@@ -1,25 +1,41 @@
-@import "tailwindcss";
+@import "tailwind.css";
 
 :root {
+  /* Paleta KODA MAKER */
   --background: #ffffff;
-  --foreground: #000000;
-  
-  /* Colores de SyG Creaciones */
-  --primary: #000000; /* Negro del logo */
+  --foreground: #09090b;
+  --primary: #000000;
   --primary-foreground: #ffffff;
-  
-  --accent: #f13d4b; /* Rojo de los corazones */
+  --accent: #f13d4b; /* El rojo de Koda */
   --accent-foreground: #ffffff;
-  
-  --card: #f8f9fa;
-  --border: #e2e8f0;
+  --card: #ffffff;
+  --border: #f4f4f5;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #ffffff;
-    --card: #121212;
-    --border: #27272a;
+@layer base {
+  body {
+    /* Evita el rebote del scroll en móviles */
+    overscroll-behavior-y: none;
+    /* Evita el resaltado azul al tocar */
+    -webkit-tap-highlight-color: transparent;
+    /* Evita selección de texto en botones/menús para que parezca App */
+    user-select: none;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Permitir selección solo en campos de texto */
+  input, textarea, [contenteditable="true"] {
+    user-select: text !important;
+  }
+}
+
+/* Ocultar scrollbars pero mantener funcionalidad */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
