@@ -139,28 +139,37 @@ export default async function ReportsPage() {
       {/* GRÁFICO Y RANKING */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* GRÁFICO: Se mantiene el contenedor que funcionaba */}
-        <section className="lg:col-span-8 bg-white p-10 rounded-[50px] shadow-sm border border-gray-50 flex flex-col">
-            <div className="flex justify-between items-start mb-10">
+       {/* GRÁFICO DE RENDIMIENTO */}
+        <section className="lg:col-span-8 bg-white p-6 md:p-10 rounded-[50px] shadow-xl border border-zinc-100 flex flex-col">
+            <div className="flex justify-between items-start mb-8">
                 <div>
                     <h3 className="font-black text-xl uppercase tracking-tighter text-black">Flujo de Ganancia</h3>
-                    <p className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest mt-1 italic">Comparativa mensual de beneficio neto</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mt-1 italic">Comparativa mensual</p>
                 </div>
                 <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-[#f13d4b]">
                     <BarChart3 size={24} />
                 </div>
             </div>
             
-            <MonthlyChart data={last6Months} />
+            {/* EL GRÁFICO (Fuera de cualquier div con scroll para que no se rompa el ancho) */}
+            <div className="w-full">
+                <MonthlyChart data={last6Months} />
+            </div>
 
-            <div className="mt-10 pt-8 border-t border-gray-100 grid grid-cols-6 gap-2">
-            {last6Months.map((m) => (
-                <div key={m.name} className="text-center group">
-                    <p suppressHydrationWarning className="text-[8px] font-black text-zinc-800 uppercase tracking-tighter">{m.name}</p>
-                    <p suppressHydrationWarning className="...">
-                        ${m.ganancia > 0 ? m.ganancia.toLocaleString('es-AR') : '0'}
-                    </p>
+            {/* LA TABLA (Solo esto tiene scroll si los números se pisan) */}
+            <div className="mt-8 pt-8 border-t border-gray-100 overflow-x-auto no-scrollbar">
+                <div className="flex justify-between items-center min-w-100 md:min-w-full px-2">
+                    {last6Months.map((m) => (
+                        <div key={m.name} className="flex-1 text-center group">
+                            <p suppressHydrationWarning className="text-[9px] font-black text-zinc-400 uppercase tracking-tighter group-hover:text-[#f13d4b] transition-colors">
+                                {m.name}
+                            </p>
+                            <p suppressHydrationWarning className={`text-[11px] font-black mt-1 ${m.ganancia > 0 ? 'text-black' : 'text-zinc-300'}`}>
+                                ${m.ganancia > 0 ? m.ganancia.toLocaleString('es-AR') : '0'}
+                            </p>
+                        </div>
+                    ))}
                 </div>
-                ))}
             </div>
         </section>
 
