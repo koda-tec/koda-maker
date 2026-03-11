@@ -97,7 +97,7 @@ export default async function DashboardPage() {
     alerts.push({
       title: 'Entregas para Hoy',
       desc: `Tenés ${deliveriesToday} pedido(s) pendientes para hoy.`,
-      icon: <BellRing size={20} className="text-[#f13d4b]" />,
+      icon: <BellRing size={20} className="text-accent" />,
       color: 'bg-red-50',
       href: '/dashboard/pedidos'
     })
@@ -106,21 +106,23 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-12 pb-32 pt-8 px-2 md:px-0 max-w-6xl mx-auto">
       
-      {/* HEADER */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
-        <div className="flex items-center gap-5">
-            <div className="w-16 h-16 bg-black rounded-[24px] flex items-center justify-center shadow-2xl rotate-3 shrink-0">
-                <span className="text-white font-black text-3xl italic">K</span>
-            </div>
-            <div>
-                <p className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.4em] mb-1 italic">Koda Maker System</p>
-                <h2 className="text-3xl md:text-4xl font-black text-black tracking-tighter uppercase leading-none">
-                    Panel de {dbUser?.name || "Tu Negocio"}
-                </h2>
-            </div>
+    <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
+    <div className="flex items-center gap-5">
+        {/* Tu Isotipo con sombra y rotación sutil */}
+        <img 
+            src="/icon-192x192.png" 
+            alt="Koda" 
+            className="w-16 h-16 rounded-3xl shadow-2xl rotate-3 border-2 border-white shrink-0" 
+        />
+        <div>
+            <p className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic">Koda Maker System</p>
+            <h2 className="text-3xl md:text-4xl font-black text-black tracking-tighter uppercase leading-none">
+                Panel de {dbUser?.name || "Carga tu nombre"}
+            </h2>
         </div>
+    </div>
         <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-gray-100 shadow-sm">
-            <CalendarDays size={18} className="text-[#f13d4b]" />
+            <CalendarDays size={18} className="text-accent" />
             <span suppressHydrationWarning className="text-[10px] font-black uppercase text-gray-500 tracking-widest">
                 {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
             </span>
@@ -157,12 +159,12 @@ export default async function DashboardPage() {
                     <TrendingUp size={16} /> <span>Calculado en tiempo real</span>
                 </div>
             </div>
-            <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-[#f13d4b] rounded-full blur-[120px] opacity-20 group-hover:opacity-30 transition-opacity" />
+            <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-accent rounded-full blur-[120px] opacity-20 group-hover:opacity-30 transition-opacity" />
         </div>
 
-        <div className="bg-white rounded-[50px] p-10 border-2 border-zinc-100 shadow-xl flex flex-col justify-between hover:border-[#f13d4b] transition-all duration-500">
+        <div className="bg-white rounded-[50px] p-10 border-2 border-zinc-100 shadow-xl flex flex-col justify-between hover:border-accent transition-all duration-500">
             <div className="space-y-4">
-                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-[#f13d4b]">
+                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-accent">
                     <Wallet size={24} />
                 </div>
                 <div>
@@ -181,7 +183,7 @@ export default async function DashboardPage() {
           <section className="lg:col-span-7 space-y-6">
             <div className="flex justify-between items-center px-2">
                 <h3 className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-400">Próximas Entregas</h3>
-                <Link href="/dashboard/pedidos" className="text-[10px] font-black text-[#f13d4b] uppercase border-b-2 border-[#f13d4b]">Ver todo</Link>
+                <Link href="/dashboard/pedidos" className="text-[10px] font-black text-accent uppercase border-b-2 border-">Ver todo</Link>
             </div>
             
             <div className="space-y-4">
@@ -215,7 +217,7 @@ export default async function DashboardPage() {
              <div className="space-y-4">
                 <h3 className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-400 px-2 italic">Accesos Directos</h3>
                 <div className="grid grid-cols-2 gap-4">
-                    <Link href="/dashboard/pedidos" className="bg-black p-10 rounded-[45px] text-white flex flex-col items-center gap-4 hover:bg-[#f13d4b] transition-all shadow-xl active:scale-95 group">
+                    <Link href="/dashboard/pedidos" className="bg-black p-10 rounded-[45px] text-white flex flex-col items-center gap-4 hover:bg-accent transition-all shadow-xl active:scale-95 group">
                         <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
                             <Plus size={32} strokeWidth={3} />
                         </div>

@@ -96,9 +96,9 @@ export function OrderTicket({ order, businessName, logoUrl }: OrderTicketProps) 
                     </div>
 
                     {/* PIE DE TICKET */}
-                    <div className="mt-12 text-center space-y-2">
-                        <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.5em]">KODA MAKER • SISTEMA DE GESTIÓN</p>
-                        <p className="text-[9px] text-zinc-400 italic">Válido por 7 días • Los precios pueden variar sin previo aviso.</p>
+                    <div className="mt-12 pt-6 border-t border-zinc-100 flex items-center justify-center gap-2">
+                        <img src="/icon-192x192.png" className="w-4 h-4 grayscale opacity-50" />
+                        <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.5em]">KODA MAKER SYSTEM</p>
                     </div>
                 </div>
             </div>
@@ -107,7 +107,7 @@ export function OrderTicket({ order, businessName, logoUrl }: OrderTicketProps) 
             <button 
                 onClick={exportImage}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-black text-white py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-[#f13d4b] transition-all disabled:opacity-50 active:scale-95"
+                className="w-full flex items-center justify-center gap-3 bg-black text-white py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl hover:bg-accent transition-all disabled:opacity-50 active:scale-95"
             >
                 {loading ? (
                     <>

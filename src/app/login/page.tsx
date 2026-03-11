@@ -59,9 +59,16 @@ const handleAuth = async () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white p-6">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <div className="inline-block p-4 bg-black rounded-3xl mb-4">
-             <span className="text-white font-black text-2xl">K</span>
+        <div className="text-center">
+          <div className="inline-block mb-4">
+            {/* Usamos tu logo full */}
+            <img src="/logo-full.png" alt="Koda Maker" className="h-16 md:h-20 object-contain mx-auto" />
           </div>
+          <h1 className="text-3xl font-black tracking-tighter uppercase">
+            {isRegistering ? "Crear Cuenta" : "Bienvenido"}
+          </h1>
+          <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2">Professional Maker Suite</p>
+        </div>
           <h1 className="text-3xl font-black tracking-tighter">
             {isRegistering ? "CREAR CUENTA" : "BIENVENIDO"}
           </h1>
@@ -74,7 +81,7 @@ const handleAuth = async () => {
               <label className="text-[10px] font-bold uppercase ml-2 text-gray-400">Nombre de tu Emprendimiento</label>
               <input 
                 type="text" placeholder="Ej: SyG Creaciones" 
-                className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all font-medium"
+                className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-accent outline-none transition-all font-medium"
                 onChange={(e) => setBusinessName(e.target.value)}
               />
             </div>
@@ -84,7 +91,7 @@ const handleAuth = async () => {
             <label className="text-[10px] font-bold uppercase ml-2 text-gray-400">Email Profesional</label>
             <input 
               type="email" placeholder="email@ejemplo.com" 
-              className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all font-medium"
+              className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-accent outline-none transition-all font-medium"
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
@@ -93,7 +100,7 @@ const handleAuth = async () => {
             <label className="text-[10px] font-bold uppercase ml-2 text-gray-400">Contraseña</label>
             <input 
               type="password" placeholder="••••••••" 
-              className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#f13d4b] outline-none transition-all font-medium"
+              className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-accent outline-none transition-all font-medium"
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>

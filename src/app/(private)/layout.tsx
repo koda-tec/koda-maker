@@ -10,7 +10,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             mientras el contenido de la página se "streamea" */}
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-8 h-8 border-4 border-gray-100 border-t-[#f13d4b] rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-gray-100 border-t-accent rounded-full animate-spin"></div>
           </div>
         }>
           {children}

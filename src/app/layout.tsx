@@ -4,14 +4,13 @@ import "./globals.css";
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
-  title: "SyG Creaciones",
-  description: "Sistema de gestión interna",
+  title: "Koda Maker — Gestión Pro",
+  description: "Sistema de gestión integral para talleres de fabricación",
   manifest: "/manifest.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "SyG Creaciones",
-  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/icon-192x192.png",
+  }
 };
 
 export const viewport: Viewport = {

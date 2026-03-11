@@ -29,10 +29,11 @@ export function Navigation() {
       <div className="flex h-full items-center justify-around md:flex-col md:justify-start md:gap-8">
         
         {/* LOGO KODA (Solo visible en PC) */}
-        <div className="hidden md:flex w-12 h-12 bg-black rounded-2xl items-center justify-center mb-6 shadow-lg">
-          <span className="text-white font-black text-xl">K</span>
+        <div className="hidden md:flex mb-6 transition-transform hover:scale-110 duration-300">
+          <Link href="/dashboard">
+            <img src="/icon-192x192.png" alt="K" className="w-14 h-14 rounded-2xl shadow-lg border border-zinc-100" />
+          </Link>
         </div>
-
         {menuItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -44,7 +45,7 @@ export function Navigation() {
               prefetch={true}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 transition-all duration-300 md:w-full md:py-2",
-                isActive ? "text-[#f13d4b]" : "text-gray-400 hover:text-black"
+                isActive ? "text-accent" : "text-gray-400 hover:text-black"
               )}
             >
               <div className={cn(
