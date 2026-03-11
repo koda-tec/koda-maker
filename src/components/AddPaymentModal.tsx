@@ -13,7 +13,7 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isPending, startTransition] = useTransition()
 
-    // BLOQUEO DE SCROLL: Evita que la página de atrás se mueva
+    // 1. BLOQUEO DE SCROLL: Congela el fondo para que no se mueva al usar el modal
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden'
@@ -25,23 +25,27 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
 
     const handleSubmit = async (formData: FormData) => {
         const amount = formData.get("amount")
+        
         if (!amount || parseFloat(amount as string) <= 0) {
-            toast.error("Monto inválido")
+            toast.error("Monto inválido", { description: "Ingresá un valor mayor a 0." })
             return
         }
 
+        // startTransition hace que la UI responda instantáneamente
         startTransition(async () => {
             try {
                 await addPayment(orderId, formData)
-                toast.success("Pago registrado con éxito")
+                toast.success("Pago registrado", { 
+                    description: `Se sumaron $${parseFloat(amount as string).toLocaleString()} al pedido.` 
+                })
                 setIsOpen(false)
             } catch (error) {
-                toast.error("Error al registrar el pago")
+                toast.error("Error al registrar", { description: "No se pudo conectar con el servidor." })
             }
         })
     }
 
-    // BOTÓN QUE DISPARA EL MODAL
+    // BOTÓN DE ACCIÓN EN LA TARJETA
     if (!isOpen) return (
         <button 
             onClick={() => setIsOpen(true)} 
@@ -53,35 +57,35 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
 
     return (
         /* 
-           CAPA 1: El contenedor fijo. 
-           - z-[40]: Arriba de las tarjetas (que no tienen z o son bajos).
-           - bottom-20: Deja el espacio exacto para que se vea tu Navbar (z-50).
+           CONTENEDOR FIJO: 
+           - z-[100] para estar arriba de los pedidos.
+           - bottom-20 (80px) para que el Navbar (z-[110]) quede libre abajo.
         */
-        <div className="fixed inset-x-0 top-0 bottom-20 z-40 flex items-center justify-center p-4">
+        <div className="fixed inset-x-0 top-0 bottom-20 z-100 flex items-center justify-center p-4">
             
-            {/* CAPA 2: El fondo oscuro (Backdrop) SÓLIDO */}
+            {/* FONDO OSCURO (BACKDROP): bg-zinc-950/95 para que no sea transparente */}
             <div 
-                className="absolute inset-0 bg-zinc-950/90 backdrop-blur-sm" 
+                className="absolute inset-0 bg-zinc-950/95 backdrop-blur-sm" 
                 onClick={() => setIsOpen(false)} 
             />
             
-            {/* CAPA 3: El contenido blanco (SÓLIDO) */}
-            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 animate-in zoom-in-95 duration-200 relative z-10 border border-zinc-200 overflow-hidden">
+            {/* CAJA DEL MODAL: bg-white sólido y relativo para estar sobre el fondo negro */}
+            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 animate-in zoom-in-95 duration-200 relative z-10 border border-zinc-200 overflow-y-auto max-h-full no-scrollbar">
                 
-                {/* HEADER */}
+                {/* CABECERA */}
                 <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
                     <h3 className="font-black uppercase text-xs tracking-widest text-zinc-500 italic underline decoration-[#f13d4b] decoration-2">Nuevo Cobro</h3>
                     <button 
                         onClick={() => setIsOpen(false)} 
-                        className="p-2 bg-zinc-100 rounded-full text-zinc-600 hover:bg-zinc-200 transition-all"
+                        className="p-2 bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors text-zinc-600"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
-                {/* VISUALIZACIÓN DE SALDO */}
+                {/* VISUALIZACIÓN DE SALDO ACTUAL */}
                 <div className="text-center bg-zinc-50 p-6 rounded-[30px] border border-zinc-100 shadow-inner">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo pendiente actual</p>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo pendiente por cobrar</p>
                     <p suppressHydrationWarning className="text-4xl font-black text-black tracking-tighter italic tabular-nums">
                         ${remaining.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </p>
@@ -99,7 +103,7 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                             placeholder="0.00" 
                             required
                             autoFocus
-                            className="w-full p-5 bg-zinc-100 rounded-2xl outline-none font-black text-center text-3xl focus:ring-2 focus:ring-green-500 transition-all text-black border-none"
+                            className="w-full p-5 bg-zinc-50 rounded-2xl outline-none font-black text-center text-3xl border-2 border-transparent focus:border-green-500 transition-all text-black shadow-sm"
                         />
                     </div>
 
@@ -107,7 +111,7 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                         <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Método de pago</label>
                         <select 
                             name="method" 
-                            className="w-full p-4 bg-zinc-100 rounded-2xl text-[11px] font-black uppercase border-none outline-none cursor-pointer text-zinc-800 appearance-none"
+                            className="w-full p-4 bg-zinc-50 rounded-2xl text-[11px] font-black uppercase border-none outline-none cursor-pointer text-zinc-800 shadow-sm appearance-none"
                         >
                             <option value="EFECTIVO">💵 Efectivo</option>
                             <option value="TRANSFERENCIA">🏦 Transferencia</option>
