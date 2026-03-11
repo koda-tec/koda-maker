@@ -13,14 +13,14 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     const [isOpen, setIsOpen] = useState(false)
     const [isPending, startTransition] = useTransition()
 
-    // Lógica para bloquear el scroll del fondo cuando el modal está abierto
+    // EFECTO: Bloquea el scroll de la página de fondo cuando el modal se abre
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden'
         } else {
             document.body.style.overflow = 'unset'
         }
-        // Limpieza al desmontar el componente
+        // Limpieza por si el componente se desmonta inesperadamente
         return () => { document.body.style.overflow = 'unset' }
     }, [isOpen])
 
@@ -28,10 +28,11 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
         const amount = formData.get("amount")
         
         if (!amount || parseFloat(amount as string) <= 0) {
-            toast.error("Monto inválido", { description: "Ingresa un valor mayor a 0." })
+            toast.error("Monto inválido", { description: "Ingresá un valor mayor a 0." })
             return
         }
 
+        // startTransition permite que la UI responda instantáneamente
         startTransition(async () => {
             try {
                 await addPayment(orderId, formData)
@@ -40,11 +41,12 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                 })
                 setIsOpen(false)
             } catch (error) {
-                toast.error("Error al registrar", { description: "No se pudo guardar el pago." })
+                toast.error("Error al registrar", { description: "No se pudo conectar con el servidor." })
             }
         })
     }
 
+    // BOTÓN QUE SE VE EN LA TARJETA DEL PEDIDO
     if (!isOpen) return (
         <button 
             onClick={() => setIsOpen(true)} 
@@ -55,15 +57,15 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
     )
 
     return (
-        /* Fondo oscuro con desenfoque y Z-index máximo */
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-100 flex items-center justify-center p-4 overflow-hidden">
+        /* FONDO OSCURO: z-[999] para que esté arriba de la navegación. bg-black/95 para cero transparencia */
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-999 flex items-center justify-center p-4 overflow-hidden">
             
-            {/* Contenedor del Modal con scroll interno si es necesario */}
-            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto no-scrollbar">
+            {/* CONTENEDOR BLANCO DEL MODAL: max-h-[90vh] para que no se salga de la pantalla en móviles chicos */}
+            <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] space-y-6 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto border border-zinc-200">
                 
-                {/* HEADER DEL MODAL */}
+                {/* CABECERA */}
                 <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
-                    <h3 className="font-black uppercase text-xs tracking-[0.2em] text-zinc-500 italic underline decoration-[#f13d4b] decoration-2">Nuevo Cobro</h3>
+                    <h3 className="font-black uppercase text-xs tracking-widest text-zinc-500 italic underline decoration-[#f13d4b] decoration-2">Nuevo Cobro</h3>
                     <button 
                         onClick={() => setIsOpen(false)} 
                         className="p-2 bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors text-zinc-600"
@@ -72,18 +74,18 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                     </button>
                 </div>
 
-                {/* INFO DE SALDO */}
+                {/* VISUALIZACIÓN DE SALDO ACTUAL */}
                 <div className="text-center bg-zinc-50 p-6 rounded-[30px] border border-zinc-100 shadow-inner">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo Pendiente</p>
-                    <p className="text-4xl font-black text-black tracking-tighter italic">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Saldo pendiente por cobrar</p>
+                    <p className="text-4xl font-black text-black tracking-tighter italic tabular-nums">
                         ${remaining.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </p>
                 </div>
 
-                {/* FORMULARIO */}
+                {/* FORMULARIO DE PAGO */}
                 <form action={handleSubmit} className="space-y-5 text-left">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Monto a Entregar</label>
+                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Monto a Entregar ($)</label>
                         <input 
                             name="amount" 
                             type="number" 
@@ -97,10 +99,10 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Método de Pago</label>
+                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-2 tracking-widest">Método utilizado</label>
                         <select 
                             name="method" 
-                            className="w-full p-4 bg-zinc-50 rounded-2xl text-[11px] font-black uppercase border-none outline-none cursor-pointer text-zinc-800 shadow-sm"
+                            className="w-full p-4 bg-zinc-50 rounded-2xl text-[11px] font-black uppercase border-none outline-none cursor-pointer text-zinc-800 shadow-sm appearance-none"
                         >
                             <option value="EFECTIVO">💵 Efectivo</option>
                             <option value="TRANSFERENCIA">🏦 Transferencia</option>
@@ -121,12 +123,12 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                             {isPending ? (
                                 <>
                                     <Loader2 className="animate-spin" size={18} />
-                                    PROCESANDO...
+                                    Procesando...
                                 </>
                             ) : (
                                 <>
                                     <Check size={18} strokeWidth={3} />
-                                    CONFIRMAR PAGO
+                                    Confirmar Pago
                                 </>
                             )}
                         </button>
