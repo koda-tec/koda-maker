@@ -17,7 +17,7 @@ import {
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { NotificationCenter } from "@/components/NotificationCenter"
-import { simulateCronJob } from "./actions-notifications"
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -106,10 +106,11 @@ export default async function DashboardPage() {
       {/* HEADER CON NOTIFICACIONES */}
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex items-center gap-5">
-            {/* Si tenés el logo en public lo podés poner acá, sino usamos la K */}
-            <div className="w-16 h-16 bg-black rounded-accent flex items-center justify-center shadow-2xl rotate-3 shrink-0">
-                <span className="text-white font-black text-3xl italic">K</span>
-            </div>
+        <div className="hidden md:flex mb-6 transition-transform hover:scale-110 duration-300">
+          <Link href="/dashboard">
+            <img src="/icon-192x192.png" alt="K" className="w-12 h-12 rounded-2xl shadow-lg border border-zinc-100" />
+          </Link>
+        </div>
             <div>
                 <p className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic">Koda Maker System</p>
                 <h2 className="text-3xl md:text-4xl font-black text-black tracking-tighter uppercase leading-none">
@@ -117,12 +118,6 @@ export default async function DashboardPage() {
                 </h2>
             </div>
         </div>
-
-<form action={async () => { "use server"; await simulateCronJob() }}>
-    <button className="w-full py-4 bg-accent text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all">
-        🧪 Simular Recordatorios de Mañana
-    </button>
-</form>
 
         <div className="flex items-center gap-3">
             {/* CAMPANITA DE NOTIFICACIONES */}
