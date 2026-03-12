@@ -36,7 +36,7 @@ async function uploadImages(files: File[], userId: string) {
 }
 
 /**
- * 1. CREAR PEDIDO (Presupuesto o Confirmado)
+ * 1. CREAR PEDIDO
  */
 export async function createOrder(formData: FormData) {
     const supabase = await createClient()
@@ -66,18 +66,22 @@ export async function createOrder(formData: FormData) {
     const totalCost = template.materials.reduce((acc, m) => acc + (m.quantity * m.material.unitPrice * quantity), 0)
 
     await prisma.$transaction(async (tx) => {
-        await tx.order.create({
+        const order = await tx.order.create({
             data: {
                 customerName, customerPhone, totalPrice, totalCost, status, designDetails, userId: user.id,
                 deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
                 items: {
                     create: { templateId: template.id, quantity, customPrice: template.basePrice }
                 },
-                payments: deposit > 0 ? { create: { amount: deposit, method: "SEÑA" } } : undefined,
+                payments: deposit > 0 ? {
+                    create: { amount: deposit, method: "SEÑA" }
+                } : undefined,
                 images: { create: imageUrls.map(url => ({ url })) }
             }
         })
-            await tx.notification.create({
+
+        // Notificación de creación
+        await tx.notification.create({
             data: {
                 title: status === 'PRESUPUESTADO' ? "Nuevo Presupuesto" : "Nuevo Pedido",
                 message: `${customerName} solicitó ${quantity}x ${template.name}`,
@@ -85,24 +89,20 @@ export async function createOrder(formData: FormData) {
                 userId: user.id
             }
         })
-        // Dentro de la acción createOrder, después de crear el pedido:
 
-
-         // 2. Descuento de Stock y Alerta Automática
-             if (status !== "PRESUPUESTADO") {
+        if (status !== "PRESUPUESTADO") {
             for (const item of template.materials) {
-                const updatedMaterial = await tx.material.update({
+                const mat = await tx.material.update({
                     where: { id: item.materialId },
                     data: { stock: { decrement: item.quantity * quantity } }
                 })
-
-                if (updatedMaterial.stock <= updatedMaterial.minStock) {
-                await tx.notification.create({
-                data: {
-                title: "¡Stock Crítico!",
-                message: `El insumo ${updatedMaterial.name} llegó a su nivel mínimo.`,
-                type: 'STOCK',
-                userId: user.id
+                if (mat.stock <= mat.minStock) {
+                    await tx.notification.create({
+                        data: {
+                            title: "¡Stock Crítico!",
+                            message: `El insumo ${mat.name} llegó al mínimo.`,
+                            type: 'STOCK',
+                            userId: user.id
                         }
                     })
                 }
@@ -115,8 +115,41 @@ export async function createOrder(formData: FormData) {
 }
 
 /**
- * 2. CONFIRMAR PRESUPUESTO (Pasa a confirmado y resta stock)
- * Esta es la función que te faltaba en el modal.
+ * 2. REGISTRAR PAGO (Faltaba esta función)
+ */
+export async function addPayment(orderId: string, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const amount = parseFloat(formData.get("amount") as string)
+    const method = formData.get("method") as string || "EFECTIVO"
+
+    const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { customerName: true }
+    })
+
+    await prisma.$transaction(async (tx) => {
+        await tx.payment.create({
+            data: { orderId, amount, method, date: new Date() }
+        })
+
+        await tx.notification.create({
+            data: {
+                title: "Cobro Registrado",
+                message: `Se recibió un pago de $${amount.toLocaleString()} de ${order?.customerName}`,
+                type: 'PAYMENT',
+                userId: user.id
+            }
+        })
+    })
+
+    revalidatePath("/dashboard/pedidos")
+}
+
+/**
+ * 3. CONFIRMAR PRESUPUESTO
  */
 export async function confirmOrder(orderId: string, formData: FormData) {
     const supabase = await createClient()
@@ -135,7 +168,6 @@ export async function confirmOrder(orderId: string, formData: FormData) {
     if (!order) return
 
     await prisma.$transaction(async (tx) => {
-        // Descontar stock
         for (const item of order.items) {
             for (const m of item.template.materials) {
                 await tx.material.update({
@@ -144,7 +176,6 @@ export async function confirmOrder(orderId: string, formData: FormData) {
                 })
             }
         }
-        // Actualizar datos finales
         await tx.order.update({
             where: { id: orderId },
             data: { 
@@ -154,14 +185,20 @@ export async function confirmOrder(orderId: string, formData: FormData) {
                 images: { create: imageUrls.map(url => ({ url })) }
             }
         })
+        await tx.notification.create({
+            data: {
+                title: "Presupuesto Confirmado",
+                message: `El trabajo de ${order.customerName} pasó a producción.`,
+                type: 'DELIVERY',
+                userId: user.id
+            }
+        })
     })
-
     revalidatePath("/dashboard/pedidos")
-    revalidatePath("/dashboard/stock")
 }
 
 /**
- * 3. EDITAR PEDIDO (General)
+ * 4. EDITAR PEDIDO GENERAL
  */
 export async function updateOrder(orderId: string, formData: FormData) {
     const supabase = await createClient()
@@ -175,86 +212,21 @@ export async function updateOrder(orderId: string, formData: FormData) {
     const deliveryDateRaw = formData.get("deliveryDate") as string
     const files = formData.getAll("files") as File[]
 
-    const order = await prisma.order.findUnique({
-        where: { id: orderId, userId: user.id },
-        include: { items: { include: { template: { include: { materials: true } } } } }
-    })
-    if (!order) return
-
     const imageUrls = await uploadImages(files, user.id)
 
-    await prisma.$transaction(async (tx) => {
-        // Si cambia de presupuesto a confirmado ahora, restamos stock
-        if (order.status === "PRESUPUESTADO" && status !== "PRESUPUESTADO") {
-            for (const item of order.items) {
-                for (const m of item.template.materials) {
-                    await tx.material.update({ where: { id: m.materialId }, data: { stock: { decrement: m.quantity * item.quantity } } })
-                }
-            }
+    await prisma.order.update({
+        where: { id: orderId, userId: user.id },
+        data: {
+            customerName, customerPhone, designDetails, status,
+            deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
+            images: { create: imageUrls.map(url => ({ url })) }
         }
-
-        await tx.order.update({
-            where: { id: orderId },
-            data: {
-                customerName, customerPhone, designDetails, status,
-                deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
-                images: { create: imageUrls.map(url => ({ url })) }
-            }
-        })
     })
-
     revalidatePath("/dashboard/pedidos")
 }
 
 /**
- * 4. ELIMINAR IMAGEN INDIVIDUAL
- */
-export async function deleteOrderImage(imageId: string, imageUrl: string) {
-    const supabase = await createClient()
-    const path = imageUrl.split('/public/disenos/')[1]
-    if (path) await supabase.storage.from('disenos').remove([path])
-    await prisma.orderImage.delete({ where: { id: imageId } })
-    revalidatePath("/dashboard/pedidos")
-}
-
-/**
- * 5. ELIMINAR PEDIDO COMPLETO (Devuelve stock)
- */
-export async function deleteOrder(id: string) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const order = await prisma.order.findUnique({
-        where: { id, userId: user.id },
-        include: { images: true, items: { include: { template: { include: { materials: true } } } } }
-    })
-    if (!order) return
-
-    await prisma.$transaction(async (tx) => {
-        if (order.status !== "PRESUPUESTADO") {
-            for (const item of order.items) {
-                for (const m of item.template.materials) {
-                    await tx.material.update({ where: { id: m.materialId }, data: { stock: { increment: m.quantity * item.quantity } } })
-                }
-            }
-        }
-        for (const img of order.images) {
-            const path = img.url.split('/public/disenos/')[1]
-            if (path) await supabase.storage.from('disenos').remove([path])
-        }
-        await tx.payment.deleteMany({ where: { orderId: id } })
-        await tx.orderImage.deleteMany({ where: { orderId: id } })
-        await tx.orderItem.deleteMany({ where: { orderId: id } })
-        await tx.order.delete({ where: { id, userId: user.id } })
-    })
-
-    revalidatePath("/dashboard/pedidos")
-    revalidatePath("/dashboard/stock")
-}
-
-/**
- * 6. MARCAR COMO ENTREGADO
+ * 5. MARCAR COMO ENTREGADO
  */
 export async function markAsDelivered(id: string) {
     const order = await prisma.order.update({ 
@@ -264,11 +236,41 @@ export async function markAsDelivered(id: string) {
     
     await prisma.notification.create({
         data: {
-            title: "Pedido Entregado",
-            message: `El trabajo de ${order.customerName} ha sido finalizado.`,
-            type: 'PAYMENT',
+            title: "Pedido Finalizado",
+            message: `El pedido de ${order.customerName} fue entregado.`,
+            type: 'DELIVERY',
             userId: order.userId
         }
     })
-    revalidatePath("/dashboard")
+    revalidatePath("/dashboard/pedidos")
+}
+
+/**
+ * 6. BORRAR IMAGEN / PEDIDO
+ */
+export async function deleteOrderImage(imageId: string, imageUrl: string) {
+    const supabase = await createClient()
+    const path = imageUrl.split('/public/disenos/')[1]
+    if (path) await supabase.storage.from('disenos').remove([path])
+    await prisma.orderImage.delete({ where: { id: imageId } })
+    revalidatePath("/dashboard/pedidos")
+}
+
+export async function deleteOrder(id: string) {
+    const order = await prisma.order.findUnique({ where: { id }, include: { images: true, items: { include: { template: { include: { materials: true } } } } } })
+    if (!order) return
+    await prisma.$transaction(async (tx) => {
+        if (order.status !== "PRESUPUESTADO") {
+            for (const item of order.items) {
+                for (const m of item.template.materials) {
+                    await tx.material.update({ where: { id: m.materialId }, data: { stock: { increment: m.quantity * item.quantity } } })
+                }
+            }
+        }
+        await tx.payment.deleteMany({ where: { orderId: id } })
+        await tx.orderImage.deleteMany({ where: { orderId: id } })
+        await tx.orderItem.deleteMany({ where: { orderId: id } })
+        await tx.order.delete({ where: { id } })
+    })
+    revalidatePath("/dashboard/pedidos")
 }

@@ -62,7 +62,7 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                CONTENEDOR FIJO: z-[9999] para estar por encima de TODO.
                Usa 'fixed inset-0' para cubrir toda la pantalla.
             */}
-            <div className="fixed inset-0 z-9999 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[9999 flex items-center justify-center p-4">
                 
                 {/* FONDO (BACKDROP): Negro casi total (95%) para anular las tarjetas de fondo */}
                 <div 
@@ -75,7 +75,7 @@ export function AddPaymentModal({ orderId, remaining }: AddPaymentModalProps) {
                     
                     {/* HEADER */}
                     <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
-                        <h3 className="font-black uppercase text-xs tracking-widest text-zinc-500 italic underline decoration-[#f13d4b] decoration-2">Nuevo Cobro</h3>
+                        <h3 className="font-black uppercase text-xs tracking-widest text-zinc-500 italic underline decoration-accent decoration-2">Nuevo Cobro</h3>
                         <button 
                             onClick={() => setIsOpen(false)} 
                             className="p-2 bg-zinc-100 rounded-full hover:bg-zinc-200 transition-colors text-zinc-600"
