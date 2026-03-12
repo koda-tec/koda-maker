@@ -6,33 +6,35 @@ import { revalidatePath } from "next/cache"
 import { sendGlobalNotification } from "../actions-notifications"
 
 /**
- * HELPER: Sube múltiples archivos a Supabase Storage y retorna las URLs
+ * HELPER: Sube múltiples archivos a Supabase Storage y retorna las URLs.
+ * Se usa Buffer para asegurar la compatibilidad con Server Actions.
  */
 async function uploadImages(files: File[], userId: string) {
     const supabase = await createClient()
     const urls: string[] = []
 
     for (const file of files) {
-        if (file && file.size > 0) {
-            // Generamos un nombre único con timestamp para evitar colisiones
-            const fileExt = file.name.split('.').pop()
-            const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-            
-            const arrayBuffer = await file.arrayBuffer()
-            const buffer = Buffer.from(arrayBuffer)
+        if (file && file.size > 0 && file.name !== 'undefined') {
+            try {
+                const fileExt = file.name.split('.').pop()
+                const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+                
+                const arrayBuffer = await file.arrayBuffer()
+                const buffer = Buffer.from(arrayBuffer)
 
-            const { data, error } = await supabase.storage
-                .from('disenos')
-                .upload(fileName, buffer, {
-                    contentType: file.type,
-                    upsert: true
-                })
+                const { data, error } = await supabase.storage
+                    .from('disenos')
+                    .upload(fileName, buffer, {
+                        contentType: file.type,
+                        upsert: true
+                    })
 
-            if (data) {
-                const { data: { publicUrl } } = supabase.storage.from('disenos').getPublicUrl(fileName)
-                urls.push(publicUrl)
-            } else {
-                console.error("Error subiendo imagen al storage:", error)
+                if (data) {
+                    const { data: { publicUrl } } = supabase.storage.from('disenos').getPublicUrl(fileName)
+                    urls.push(publicUrl)
+                }
+            } catch (err) {
+                console.error("Error subiendo imagen individual:", err)
             }
         }
     }
@@ -41,14 +43,13 @@ async function uploadImages(files: File[], userId: string) {
 
 /**
  * 1. CREAR PEDIDO
- * Registra la venta, gestiona fotos, descuenta stock y envía notificaciones push.
+ * Registra venta, gestiona stock, sube fotos y envía notificación Push.
  */
 export async function createOrder(formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error("No autorizado")
 
-    // Extracción de datos del FormData
     const customerName = formData.get("customerName") as string
     const customerPhone = formData.get("customerPhone") as string
     const templateId = formData.get("templateId") as string
@@ -59,93 +60,67 @@ export async function createOrder(formData: FormData) {
     const deposit = parseFloat(formData.get("deposit") as string) || 0
     const files = formData.getAll("files") as File[]
 
-    // Subida de imágenes al bucket 'disenos'
-    const imageUrls = await uploadImages(files, user.id)
-
-    // Buscamos la plantilla para obtener el precio de venta y los materiales (costos)
+    // A. Buscamos la receta
     const template = await prisma.productTemplate.findUnique({
         where: { id: templateId, userId: user.id },
         include: { materials: { include: { material: true } } }
     })
+    if (!template) throw new Error("Plantilla no encontrada")
 
-    if (!template) throw new Error("La plantilla seleccionada no existe.")
+    // B. Subida de imágenes
+    const imageUrls = await uploadImages(files, user.id)
 
-    // Cálculo de totales basados en la receta de la plantilla
     const totalPrice = template.basePrice * quantity
-    const totalCost = template.materials.reduce((acc, m) => 
-        acc + (m.quantity * m.material.unitPrice * quantity), 0
-    )
+    const totalCost = template.materials.reduce((acc, m) => acc + (m.quantity * m.material.unitPrice * quantity), 0)
 
+    // C. Transacción en Base de Datos
     try {
         await prisma.$transaction(async (tx) => {
-            // A. Creamos el registro del Pedido
             const order = await tx.order.create({
                 data: {
-                    customerName,
-                    customerPhone,
-                    totalPrice,
-                    totalCost,
-                    status,
-                    designDetails,
-                    userId: user.id,
+                    customerName, customerPhone, totalPrice, totalCost, status, designDetails, userId: user.id,
                     deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
-                    items: {
-                        create: {
-                            templateId: template.id,
-                            quantity,
-                            customPrice: template.basePrice,
-                        }
-                    },
-                    // B. Registramos la seña si el usuario ingresó un monto
-                    payments: deposit > 0 ? {
-                        create: { amount: deposit, method: "SEÑA" }
-                    } : undefined,
-                    // C. Vinculamos las URLs de las fotos subidas
-                    images: {
-                        create: imageUrls.map(url => ({ url }))
-                    }
+                    items: { create: { templateId: template.id, quantity, customPrice: template.basePrice } },
+                    payments: deposit > 0 ? { create: { amount: deposit, method: "SEÑA" } } : undefined,
+                    images: { create: imageUrls.map(url => ({ url })) }
                 }
             })
 
-            // D. NOTIFICACIÓN PUSH: Registro de operación
-            await sendGlobalNotification(
-                user.id, 
-                status === 'PRESUPUESTADO' ? "📄 Nuevo Presupuesto" : "📦 Nuevo Pedido", 
-                `Registraste a ${customerName} por un total de $${totalPrice.toLocaleString('es-AR')}`, 
-                'DELIVERY'
-            )
-
-            // E. GESTIÓN DE STOCK: Solo restamos si NO es un simple presupuesto
+            // D. Descuento de stock y Alertas automáticas
             if (status !== "PRESUPUESTADO") {
                 for (const item of template.materials) {
-                    const updatedMaterial = await tx.material.update({
+                    const mat = await tx.material.update({
                         where: { id: item.materialId },
                         data: { stock: { decrement: item.quantity * quantity } }
                     })
                     
-                    // Si el stock cae por debajo del mínimo, enviamos alerta crítica
-                    if (updatedMaterial.stock <= updatedMaterial.minStock) {
-                        await sendGlobalNotification(
-                            user.id, 
-                            "⚠️ Stock Crítico", 
-                            `El insumo ${updatedMaterial.name} llegó a su nivel mínimo (${updatedMaterial.stock} restantes).`, 
-                            'STOCK'
-                        )
+                    if (mat.stock <= mat.minStock) {
+                        await sendGlobalNotification(user.id, "⚠️ Stock Crítico", `El insumo ${mat.name} llegó al mínimo (${mat.stock} un.)`, 'STOCK')
                     }
                 }
             }
         })
-    } catch (error) {
-        console.error("Error en la transacción de creación:", error)
-        throw new Error("No se pudo completar el registro del pedido.")
+    } catch (e) {
+        console.error("Error DB:", e)
+        throw new Error("Error al guardar el pedido")
     }
+
+    // E. Notificación Push de éxito
+    try {
+        await sendGlobalNotification(
+            user.id, 
+            status === 'PRESUPUESTADO' ? "📄 Nuevo Presupuesto" : "📦 Nuevo Pedido", 
+            `Registraste a ${customerName} por $${totalPrice.toLocaleString('es-AR')}`, 
+            'DELIVERY'
+        )
+    } catch (notifErr) { console.error("Push falló silenciosamente:", notifErr) }
 
     revalidatePath("/dashboard/pedidos")
     revalidatePath("/dashboard/stock")
 }
 
 /**
- * 2. REGISTRAR PAGO ADICIONAL (Cobros parciales)
+ * 2. REGISTRAR PAGO ADICIONAL
  */
 export async function addPayment(orderId: string, formData: FormData) {
     const supabase = await createClient()
@@ -160,25 +135,24 @@ export async function addPayment(orderId: string, formData: FormData) {
         select: { customerName: true }
     })
 
-    await prisma.$transaction(async (tx) => {
-        await tx.payment.create({
+    try {
+        await prisma.payment.create({
             data: { orderId, amount, method, date: new Date() }
         })
-
-        // NOTIFICACIÓN PUSH: Ingreso de dinero
+        
         await sendGlobalNotification(
             user.id, 
             "💰 Cobro Recibido", 
             `Ingresaron $${amount.toLocaleString()} de ${order?.customerName}`, 
             'PAYMENT'
         )
-    })
+    } catch (e) { console.error(e) }
 
     revalidatePath("/dashboard/pedidos")
 }
 
 /**
- * 3. CONFIRMAR PRESUPUESTO (Pasar a Pedido Firmado)
+ * 3. CONFIRMAR PEDIDO (Desde Presupuesto)
  */
 export async function confirmOrder(orderId: string, formData: FormData) {
     const supabase = await createClient()
@@ -196,45 +170,39 @@ export async function confirmOrder(orderId: string, formData: FormData) {
     })
     if (!order) return
 
-    await prisma.$transaction(async (tx) => {
-        // Al confirmar, ahora sí descontamos el stock físico
-        for (const item of order.items) {
-            for (const m of item.template.materials) {
-                const mat = await tx.material.update({
-                    where: { id: m.materialId },
-                    data: { stock: { decrement: m.quantity * item.quantity } }
-                })
-                if (mat.stock <= mat.minStock) {
-                    await sendGlobalNotification(user.id, "⚠️ Stock Crítico", `Insumo ${mat.name} agotándose.`, 'STOCK')
+    try {
+        await prisma.$transaction(async (tx) => {
+            for (const item of order.items) {
+                for (const m of item.template.materials) {
+                    const mat = await tx.material.update({
+                        where: { id: m.materialId },
+                        data: { stock: { decrement: m.quantity * item.quantity } }
+                    })
+                    if (mat.stock <= mat.minStock) {
+                        await sendGlobalNotification(user.id, "⚠️ Stock Crítico", `Insumo ${mat.name} agotándose.`, 'STOCK')
+                    }
                 }
             }
-        }
-
-        await tx.order.update({
-            where: { id: orderId },
-            data: { 
-                status: 'CONFIRMADO', 
-                deliveryDate: new Date(deliveryDate), 
-                designDetails: designDetails || order.designDetails,
-                images: { create: imageUrls.map(url => ({ url })) }
-            }
+            await tx.order.update({
+                where: { id: orderId },
+                data: { 
+                    status: 'CONFIRMADO', 
+                    deliveryDate: new Date(deliveryDate), 
+                    designDetails: designDetails || order.designDetails,
+                    images: { create: imageUrls.map(url => ({ url })) }
+                }
+            })
         })
 
-        // NOTIFICACIÓN PUSH: Confirmación de venta
-        await sendGlobalNotification(
-            user.id, 
-            "✅ Venta Confirmada", 
-            `El trabajo de ${order.customerName} ya está en producción oficial.`, 
-            'DELIVERY'
-        )
-    })
+        await sendGlobalNotification(user.id, "✅ Venta Confirmada", `El presupuesto de ${order.customerName} pasó a producción`, 'DELIVERY')
+    } catch (e) { console.error(e) }
 
     revalidatePath("/dashboard/pedidos")
     revalidatePath("/dashboard/stock")
 }
 
 /**
- * 4. EDITAR PEDIDO (Actualización general)
+ * 4. EDITAR PEDIDO GENERAL
  */
 export async function updateOrder(orderId: string, formData: FormData) {
     const supabase = await createClient()
@@ -257,7 +225,7 @@ export async function updateOrder(orderId: string, formData: FormData) {
     const imageUrls = await uploadImages(files, user.id)
 
     await prisma.$transaction(async (tx) => {
-        // Lógica de Stock: Si el usuario cambia manualmente el estado de Presupuesto a Confirmado
+        // Si el estado cambia de Presupuesto a algo real, descontamos stock ahora
         if (order.status === "PRESUPUESTADO" && status !== "PRESUPUESTADO") {
             for (const item of order.items) {
                 for (const m of item.template.materials) {
@@ -269,10 +237,7 @@ export async function updateOrder(orderId: string, formData: FormData) {
         await tx.order.update({
             where: { id: orderId },
             data: {
-                customerName,
-                customerPhone,
-                designDetails,
-                status,
+                customerName, customerPhone, designDetails, status,
                 deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
                 images: { create: imageUrls.map(url => ({ url })) }
             }
@@ -284,7 +249,7 @@ export async function updateOrder(orderId: string, formData: FormData) {
 }
 
 /**
- * 5. MARCAR COMO ENTREGADO (Cierre de ciclo)
+ * 5. MARCAR COMO ENTREGADO
  */
 export async function markAsDelivered(id: string) {
     const order = await prisma.order.update({ 
@@ -292,75 +257,52 @@ export async function markAsDelivered(id: string) {
         data: { status: 'ENTREGADO' } 
     })
     
-    // NOTIFICACIÓN PUSH: Fin de trabajo
-    await sendGlobalNotification(
-        order.userId, 
-        "🏁 Trabajo Entregado", 
-        `El pedido de ${order.customerName} ha sido finalizado con éxito.`, 
-        'DELIVERY'
-    )
+    try {
+        await sendGlobalNotification(order.userId, "🏁 Trabajo Entregado", `El pedido de ${order.customerName} ha sido finalizado.`, 'DELIVERY')
+    } catch (e) {}
+    
     revalidatePath("/dashboard/pedidos")
 }
 
 /**
- * 6. GESTIÓN DE IMÁGENES (Borrado individual)
+ * 6. BORRAR IMAGEN INDIVIDUAL
  */
 export async function deleteOrderImage(imageId: string, imageUrl: string) {
     const supabase = await createClient()
-    
-    // Extraemos la ruta del archivo del URL público para borrarlo de Supabase Storage
     const path = imageUrl.split('/public/disenos/')[1]
-    if (path) {
-        await supabase.storage.from('disenos').remove([path])
-    }
-
+    if (path) await supabase.storage.from('disenos').remove([path])
     await prisma.orderImage.delete({ where: { id: imageId } })
     revalidatePath("/dashboard/pedidos")
 }
 
 /**
- * 7. ELIMINAR PEDIDO COMPLETO
- * Borra registros, imágenes en la nube y DEVUELVE los materiales al stock.
+ * 7. ELIMINAR PEDIDO COMPLETO (Devuelve materiales al stock)
  */
 export async function deleteOrder(id: string) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const order = await prisma.order.findUnique({
-        where: { id, userId: user.id },
-        include: { 
-            images: true, 
-            items: { include: { template: { include: { materials: true } } } } 
-        }
-    })
-
+    const order = await prisma.order.findUnique({ where: { id }, include: { images: true, items: { include: { template: { include: { materials: true } } } } } })
     if (!order) return
-
+    
     await prisma.$transaction(async (tx) => {
-        // A. DEVOLUCIÓN DE STOCK (Solo si el pedido ya los había restado)
+        // Devolvemos materiales al estante si no era solo un presupuesto
         if (order.status !== "PRESUPUESTADO") {
             for (const item of order.items) {
                 for (const m of item.template.materials) {
-                    await tx.material.update({
-                        where: { id: m.materialId },
-                        data: { stock: { increment: m.quantity * item.quantity } }
-                    })
+                    await tx.material.update({ where: { id: m.materialId }, data: { stock: { increment: m.quantity * item.quantity } } })
                 }
             }
         }
-
-        // B. LIMPIEZA DE STORAGE: Borramos todas las fotos del pedido de la nube
+        
+        // Limpiamos Storage
+        const supabase = await createClient()
         for (const img of order.images) {
             const path = img.url.split('/public/disenos/')[1]
             if (path) await supabase.storage.from('disenos').remove([path])
         }
 
-        // C. BORRADO DE BASE DE DATOS (Cascade manual)
         await tx.payment.deleteMany({ where: { orderId: id } })
         await tx.orderImage.deleteMany({ where: { orderId: id } })
         await tx.orderItem.deleteMany({ where: { orderId: id } })
-        await tx.order.delete({ where: { id, userId: user.id } })
+        await tx.order.delete({ where: { id } })
     })
 
     revalidatePath("/dashboard/pedidos")
