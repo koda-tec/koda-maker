@@ -14,18 +14,16 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export function PushLoader() {
-  const hasSubscribed = useRef(false); // Candado para evitar doble ejecución
+  const isRunning = useRef(false);
 
   useEffect(() => {
-    // Si ya se intentó suscribir en esta carga de página, no hacer nada
-    if (hasSubscribed.current) return;
-
+    if (isRunning.current) return;
+    
     async function registerPush() {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
       try {
-        hasSubscribed.current = true; // Marcamos como intentado
-        
+        isRunning.current = true;
         const registration = await navigator.serviceWorker.ready;
         const permission = await Notification.requestPermission();
         
@@ -36,7 +34,6 @@ export function PushLoader() {
           applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
         });
         
-        // Enviamos al servidor de forma silenciosa
         await subscribeUser(JSON.parse(JSON.stringify(subscription)));
         console.log("✅ Dispositivo sincronizado");
 

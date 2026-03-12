@@ -14,7 +14,7 @@ if (process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
 }
 
 /**
- * SUSCRIBIR DISPOSITIVO
+ * SUSCRIBIR DISPOSITIVO (Sin revalidatePath para evitar bucles)
  */
 export async function subscribeUser(subscription: any) {
     const supabase = await createClient()
@@ -31,23 +31,18 @@ export async function subscribeUser(subscription: any) {
             userId: user.id
         }
     })
+    
+    // No ponemos revalidatePath aquí.
 }
 
 /**
- * FUNCIÓN MAESTRA DE NOTIFICACIONES (4 ARGUMENTOS)
+ * FUNCIÓN MAESTRA DE NOTIFICACIONES
  */
-export async function sendGlobalNotification(
-    userId: string, 
-    title: string, 
-    message: string, 
-    type: string // <-- Asegúrate de que este cuarto argumento exista
-) {
-    // 1. Guardar en la base de datos para la campanita
+export async function sendGlobalNotification(userId: string, title: string, message: string, type: string) {
     await prisma.notification.create({
         data: { title, message, type, userId }
     })
 
-    // 2. Enviar Push al celular (con try-catch para no romper la app)
     try {
         const subs = await prisma.pushSubscription.findMany({ where: { userId } })
         const payload = JSON.stringify({ title, body: message })
@@ -82,17 +77,10 @@ export async function clearAllNotifications() {
     revalidatePath("/dashboard")
 }
 
-// Nueva función para pruebas
 export async function sendTestPush() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    await sendGlobalNotification(
-        user.id, 
-        "🚀 Prueba de Koda", 
-        "Tu sistema de notificaciones está volando.", 
-        "DELIVERY"
-    )
+    await sendGlobalNotification(user.id, "🚀 Prueba de Koda", "Tu sistema de notificaciones está volando.", "DELIVERY")
 }
-
