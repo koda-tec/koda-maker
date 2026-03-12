@@ -18,8 +18,8 @@ export default async function ConfigPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-12 pb-32 pt-8 px-4">
       <header>
-        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.4em] mb-1 italic text-center md:text-left">Koda Settings</h1>
-        <h2 className="text-5xl font-black text-black tracking-tighter uppercase text-center md:text-left">Configuración</h2>
+        <h1 className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic text-center md:text-left">Koda Settings</h1>
+        <h2 className="text-4xl font-black text-black tracking-tighter uppercase text-center md:text-left">Configuración</h2>
       </header>
 
       <div className="grid grid-cols-1 gap-10">
@@ -27,7 +27,7 @@ export default async function ConfigPage() {
         {/* SECCIÓN 1: IDENTIDAD VISUAL - IMPORTANTE: encType="multipart/form-data" */}
         <section className="bg-white p-8 md:p-12 rounded-[50px] shadow-sm border border-gray-100 relative overflow-hidden">
             <div className="flex items-center gap-3 mb-10">
-                <div className="w-2 h-6 bg-[#f13d4b] rounded-full" />
+                <div className="w-2 h-6 bg-accent rounded-full" />
                 <h3 className="font-black uppercase text-sm tracking-widest text-zinc-800 italic">Identidad Visual</h3>
             </div>
 
@@ -42,7 +42,7 @@ export default async function ConfigPage() {
                                 <Building2 size={48} className="text-zinc-200" />
                             )}
                         </div>
-                        <label className="absolute -bottom-2 -right-2 p-4 bg-black text-white rounded-3xl cursor-pointer shadow-2xl hover:bg-[#f13d4b] transition-all active:scale-90 z-10">
+                        <label className="absolute -bottom-2 -right-2 p-4 bg-black text-white rounded-3xl cursor-pointer shadow-2xl hover:bg-accent transition-all active:scale-90 z-10">
                             <Camera size={20} strokeWidth={2.5} />
                             <input name="logo" type="file" accept="image/*" className="hidden" />
                         </label>
@@ -54,7 +54,7 @@ export default async function ConfigPage() {
                             <input 
                                 name="name" 
                                 defaultValue={user.name || ""} 
-                                className="w-full p-5 bg-zinc-50 border-none rounded-[25px] outline-none focus:ring-2 focus:ring-[#f13d4b] font-black text-xl tracking-tighter"
+                                className="w-full p-5 bg-zinc-50 border-none rounded-[25px] outline-none focus:ring-2 focus:ring-accent font-black text-xl tracking-tighter"
                                 placeholder="Ej: SyG Creaciones"
                             />
                         </div>
