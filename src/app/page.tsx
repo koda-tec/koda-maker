@@ -145,9 +145,9 @@ export default function Home() {
           
           <div className="flex flex-wrap justify-center gap-10">
             <FooterLink label="Dashboard" href="/dashboard" />
-            <FooterLink label="Privacidad" href="/" />
-            <FooterLink label="Soporte" href="/" />
-            <FooterLink label="Koda Startup" href="/" />
+            <FooterLink label="Privacidad" href="/privacidad" />
+            <FooterLink label="Soporte" href="/soporte" />
+            <FooterLink label="Koda Startup" href="https://kodatec.app/" />
           </div>
         </div>
       </footer>
