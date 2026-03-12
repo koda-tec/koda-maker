@@ -17,7 +17,7 @@ import {
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { NotificationCenter } from "@/components/NotificationCenter"
-
+import { simulateCronJob } from "./actions-notifications"
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -117,6 +117,12 @@ export default async function DashboardPage() {
                 </h2>
             </div>
         </div>
+
+<form action={async () => { "use server"; await simulateCronJob() }}>
+    <button className="w-full py-4 bg-accent text-white rounded-3xl font-black uppercase text-[10px] tracking-widest shadow-lg active:scale-95 transition-all">
+        🧪 Simular Recordatorios de Mañana
+    </button>
+</form>
 
         <div className="flex items-center gap-3">
             {/* CAMPANITA DE NOTIFICACIONES */}

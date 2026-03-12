@@ -103,3 +103,25 @@ export async function sendTestPush() {
         "DELIVERY"
     )
 }
+
+// FUNCIÓN PARA SIMULAR EL CRON JOB MANUALMENTE
+export async function simulateCronJob() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Llamamos a nuestra propia API interna pasándole el secreto
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    
+    try {
+        const res = await fetch(`${baseUrl}/api/cron/daily-tasks`, {
+            headers: {
+                'Authorization': `Bearer ${process.env.CRON_SECRET}`
+            }
+        })
+        const data = await res.json()
+        return data
+    } catch (e) {
+        console.error("Error simulando Cron:", e)
+    }
+}
