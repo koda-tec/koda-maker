@@ -7,11 +7,15 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Koda Maker — Gestión Pro",
-  description: "Sistema de gestión integral para talleres de fabricación",
+  description: "Sistema de gestión para fabricantes e impresores 3D.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/favicon.ico",
-    apple: "/icon-192x192.png",
+    shortcut: "/favicon.ico",
+    apple: "/icon-192x192.png", 
+  },
+ verification: {
+    google: "5GBWoDtNSsMUwJj38oZCmqovLSYulVl1db2Y38zBS3M",
   },
 };
 
