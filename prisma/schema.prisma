@@ -25,8 +25,21 @@ model User {
   orders        Order[]
   purchases     Purchase[] 
   notifications Notification[]
+  pushSubscriptions PushSubscription[]
 
 }
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model Notification {
   id        String   @id @default(cuid())
   title     String
