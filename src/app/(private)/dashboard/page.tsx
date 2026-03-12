@@ -17,6 +17,7 @@ import {
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { NotificationCenter } from "@/components/NotificationCenter"
+import { EnableNotifications } from "@/components/EnableNotifications"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -103,11 +104,9 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-12 pb-32 pt-8 px-4 max-w-6xl mx-auto">
       
-      {/* HEADER CON NOTIFICACIONES */}
-      {/* HEADER DEL DASHBOARD CON LOGO REAL */}
+
 <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
   <div className="flex items-center gap-5">
-      {/* Tu Isotipo Real (Versión B) */}
       <img 
         src="/icon-192x192.png" 
         alt="Koda Maker" 
@@ -136,7 +135,7 @@ export default async function DashboardPage() {
       </div>
   </div>
 </header>
-
+ <EnableNotifications />
       {/* RENDER DE BANNERS DE ALERTA */}
       {alerts.length > 0 && (
         <section className="space-y-3">

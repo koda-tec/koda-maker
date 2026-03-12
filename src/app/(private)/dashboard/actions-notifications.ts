@@ -21,9 +21,15 @@ export async function subscribeUser(subscription: any) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    // Usamos upsert basado en el endpoint para que, si el mismo navegador 
+    // intenta suscribirse de nuevo, solo actualice el registro existente.
     await prisma.pushSubscription.upsert({
         where: { endpoint: subscription.endpoint },
-        update: {},
+        update: {
+            userId: user.id, // Aseguramos que esté vinculado al usuario actual
+            p256dh: subscription.keys.p256dh,
+            auth: subscription.keys.auth,
+        },
         create: {
             endpoint: subscription.endpoint,
             p256dh: subscription.keys.p256dh,
@@ -31,8 +37,6 @@ export async function subscribeUser(subscription: any) {
             userId: user.id
         }
     })
-    
-    // No ponemos revalidatePath aquí.
 }
 
 /**
