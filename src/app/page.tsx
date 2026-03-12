@@ -10,9 +10,9 @@ export default function Home() {
           <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
             <span className="text-white font-black text-sm">K</span>
           </div>
-          <span className="font-bold tracking-tighter text-xl">KODA<span className="text-[#f13d4b]">MAKER</span></span>
+          <span className="font-bold tracking-tighter text-xl">KODA<span className="text-accent">MAKER</span></span>
         </div>
-        <Link href="/login?mode=login" className="text-sm font-bold hover:text-[#f13d4b] transition-colors">
+        <Link href="/login?mode=login" className="text-sm font-bold hover:text-accent transition-colors">
           Iniciar Sesión
         </Link>
       </header>
@@ -20,13 +20,13 @@ export default function Home() {
       {/* Hero Section */}
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 pt-12 pb-20 text-center space-y-8">
         <div className="inline-flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full mb-4">
-          <ShieldCheck className="w-4 h-4 text-[#f13d4b]" />
+          <ShieldCheck className="w-4 h-4 text-accent" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Desarrollado por KODA Tech</span>
         </div>
 
         <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] uppercase">
           Toma el <br /> 
-          <span className="text-[#f13d4b]">Control.</span>
+          <span className="text-accent">Control.</span>
         </h1>
         
         <p className="text-lg text-gray-600 max-w-xl mx-auto font-medium">
@@ -50,7 +50,7 @@ export default function Home() {
           <FeatureCard icon={<BarChart3 />} title="Analíticas" desc="Mira cuánto ganas mes a mes." />
           <FeatureCard icon={<Scissors />} title="Láser & 3D" desc="Plantillas de producción listas." />
           <FeatureCard icon={<Box />} title="Pedidos" desc="Estado de producción en vivo." />
-          <div className="bg-[#f13d4b] p-6 rounded-3xl flex flex-col items-center justify-center text-white">
+          <div className="bg-accent p-6 rounded-3xl flex flex-col items-center justify-center text-white">
             <span className="font-black text-2xl leading-none">PWA</span>
             <span className="text-[10px] uppercase font-bold">App instalable</span>
           </div>
@@ -70,7 +70,7 @@ export default function Home() {
 function FeatureCard({ icon, title, desc }: { icon: any, title: string, desc: string }) {
   return (
     <div className="p-6 bg-white border border-gray-100 rounded-3xl text-left space-y-2 shadow-sm">
-      <div className="text-[#f13d4b]">{icon}</div>
+      <div className="text-accent">{icon}</div>
       <h3 className="font-bold text-sm uppercase tracking-tight">{title}</h3>
       <p className="text-xs text-gray-500 leading-tight">{desc}</p>
     </div>

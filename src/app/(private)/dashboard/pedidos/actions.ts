@@ -77,23 +77,35 @@ export async function createOrder(formData: FormData) {
                 images: { create: imageUrls.map(url => ({ url })) }
             }
         })
-
-        // Dentro de la acción createOrder, después de crear el pedido:
-        await tx.notification.create({
+            await tx.notification.create({
             data: {
-                title: "Nuevo Pedido Confirmado",
-                message: `Se registró un pedido de ${customerName}`,
+                title: status === 'PRESUPUESTADO' ? "Nuevo Presupuesto" : "Nuevo Pedido",
+                message: `${customerName} solicitó ${quantity}x ${template.name}`,
                 type: 'DELIVERY',
                 userId: user.id
             }
         })
+        // Dentro de la acción createOrder, después de crear el pedido:
 
-        if (status !== "PRESUPUESTADO") {
+
+         // 2. Descuento de Stock y Alerta Automática
+             if (status !== "PRESUPUESTADO") {
             for (const item of template.materials) {
-                await tx.material.update({
+                const updatedMaterial = await tx.material.update({
                     where: { id: item.materialId },
                     data: { stock: { decrement: item.quantity * quantity } }
                 })
+
+                if (updatedMaterial.stock <= updatedMaterial.minStock) {
+                await tx.notification.create({
+                data: {
+                title: "¡Stock Crítico!",
+                message: `El insumo ${updatedMaterial.name} llegó a su nivel mínimo.`,
+                type: 'STOCK',
+                userId: user.id
+                        }
+                    })
+                }
             }
         }
     })
@@ -245,25 +257,18 @@ export async function deleteOrder(id: string) {
  * 6. MARCAR COMO ENTREGADO
  */
 export async function markAsDelivered(id: string) {
-    await prisma.order.update({ where: { id }, data: { status: 'ENTREGADO' } })
-    revalidatePath("/dashboard/pedidos")
-}
-
-//Registrar un pago extra
-export async function addPayment(orderId: string, formData: FormData) {
-    const amount = parseFloat(formData.get("amount") as string)
-    const method = formData.get("method") as string || "EFECTIVO"
-
-    if (isNaN(amount) || amount <= 0) return
-
-    await prisma.payment.create({
+    const order = await prisma.order.update({ 
+        where: { id }, 
+        data: { status: 'ENTREGADO' } 
+    })
+    
+    await prisma.notification.create({
         data: {
-            orderId,
-            amount,
-            method,
-            date: new Date()
+            title: "Pedido Entregado",
+            message: `El trabajo de ${order.customerName} ha sido finalizado.`,
+            type: 'PAYMENT',
+            userId: order.userId
         }
     })
-
-    revalidatePath("/dashboard/pedidos")
+    revalidatePath("/dashboard")
 }

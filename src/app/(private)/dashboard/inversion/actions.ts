@@ -10,6 +10,7 @@ export async function registerPurchase(formData: FormData) {
 
     const materialId = formData.get("materialId") as string
     const quantity = parseFloat(formData.get("quantity") as string)
+    const material = await prisma.material.findUnique({ where: { id: materialId }})
     const newUnitPrice = parseFloat(formData.get("unitPrice") as string)
     const totalAmount = quantity * newUnitPrice
 
@@ -56,7 +57,16 @@ export async function registerPurchase(formData: FormData) {
                 data: { totalCost: newTotalCost }
             })
         }
+            await tx.notification.create({
+            data: {
+            title: "Inversión Registrada",
+            message: `Se sumaron ${quantity} ${material?.unit} de ${material?.name} al stock.`,
+            type: 'STOCK',
+            userId: user.id
+            }
+        })
     })
+    
 
     // Forzamos el refresco de todas las rutas clave
     revalidatePath("/dashboard/stock")
