@@ -104,33 +104,38 @@ export default async function DashboardPage() {
     <div className="space-y-12 pb-32 pt-8 px-4 max-w-6xl mx-auto">
       
       {/* HEADER CON NOTIFICACIONES */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="flex items-center gap-5">
-        <div className="hidden md:flex mb-6 transition-transform hover:scale-110 duration-300">
-          <Link href="/dashboard">
-            <img src="/icon-192x192.png" alt="K" className="w-12 h-12 rounded-2xl shadow-lg border border-zinc-100" />
-          </Link>
-        </div>
-            <div>
-                <p className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic">Koda Maker System</p>
-                <h2 className="text-3xl md:text-4xl font-black text-black tracking-tighter uppercase leading-none">
-                    Panel de {dbUser.name || "Tu Negocio"}
-                </h2>
-            </div>
-        </div>
+      {/* HEADER DEL DASHBOARD CON LOGO REAL */}
+<header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
+  <div className="flex items-center gap-5">
+      {/* Tu Isotipo Real (Versión B) */}
+      <img 
+        src="/icon-192x192.png" 
+        alt="Koda Maker" 
+        className="w-16 h-16 rounded-3xl shadow-2xl rotate-3 border-2 border-white shrink-0 object-contain bg-black" 
+      />
+      <div>
+          <p className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic">
+              Koda Maker System
+          </p>
+          <h2 className="text-3xl md:text-4xl font-black text-black tracking-tighter uppercase leading-none">
+              Panel de {dbUser?.name || "Tu Negocio"}
+          </h2>
+      </div>
+  </div>
 
-        <div className="flex items-center gap-3">
-            {/* CAMPANITA DE NOTIFICACIONES */}
-            <NotificationCenter notifications={notifications} />
+  <div className="flex items-center gap-3">
+      {/* CAMPANITA DE NOTIFICACIONES */}
+      <NotificationCenter notifications={notifications} />
 
-            <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-zinc-100 shadow-sm text-zinc-500">
-                <CalendarDays size={18} className="text-accent" />
-                <span suppressHydrationWarning className="text-[10px] font-black uppercase tracking-widest">
-                    {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
-                </span>
-            </div>
-        </div>
-      </header>
+      {/* FECHA ACTUAL */}
+      <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-zinc-100 shadow-sm text-zinc-500">
+          <CalendarDays size={18} className="text-accent" />
+          <span suppressHydrationWarning className="text-[10px] font-black uppercase tracking-widest">
+              {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+          </span>
+      </div>
+  </div>
+</header>
 
       {/* RENDER DE BANNERS DE ALERTA */}
       {alerts.length > 0 && (

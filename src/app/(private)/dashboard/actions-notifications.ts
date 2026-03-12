@@ -31,14 +31,6 @@ export async function subscribeUser(subscription: any) {
             userId: user.id
         }
     })
-
-    // Bienvenida inmediata
-    await sendGlobalNotification(
-        user.id, 
-        "🎯 Sistema Conectado", 
-        "Koda Maker ya puede enviarte alertas a este celular.", 
-        'STOCK'
-    )
 }
 
 /**
