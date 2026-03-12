@@ -61,8 +61,8 @@ export async function registerPurchase(formData: FormData) {
         await sendGlobalNotification(
             user.id, 
             "🧱 Inversión Registrada", 
-            `Se sumaron ${quantity} unidades de ${material?.name || 'Insumo'} al stock.`, 
-            'STOCK'
+            `Se sumaron ${quantity} unidades de ${material?.name || 'Insumo'}`, 
+            'STOCK' // <-- El 4to argumento
         )
 
     } catch (e) {

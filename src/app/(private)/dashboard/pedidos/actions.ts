@@ -7,6 +7,7 @@ import { sendGlobalNotification } from "../actions-notifications"
 
 /**
  * HELPER: Sube múltiples archivos a Supabase Storage y retorna las URLs.
+ * Se usa Buffer para asegurar compatibilidad total con Server Actions.
  */
 async function uploadImages(files: File[], userId: string) {
     const supabase = await createClient()
@@ -42,6 +43,7 @@ async function uploadImages(files: File[], userId: string) {
 
 /**
  * 1. CREAR PEDIDO
+ * Registra venta, gestiona stock, fotos y envía notificaciones Push.
  */
 export async function createOrder(formData: FormData) {
     const supabase = await createClient()
@@ -72,7 +74,7 @@ export async function createOrder(formData: FormData) {
 
     try {
         await prisma.$transaction(async (tx) => {
-            await tx.order.create({
+            const order = await tx.order.create({
                 data: {
                     customerName, customerPhone, totalPrice, totalCost, status, designDetails, userId: user.id,
                     deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
@@ -99,20 +101,20 @@ export async function createOrder(formData: FormData) {
         throw new Error("Fallo al guardar el pedido")
     }
 
-    // Notificaciones fuera de la transacción para evitar Timeouts
+    // Notificaciones fuera de la transacción para evitar Timeouts en Vercel
     try {
         await sendGlobalNotification(user.id, status === 'PRESUPUESTADO' ? "📄 Nuevo Presupuesto" : "📦 Nuevo Pedido", `Registraste a ${customerName} por $${totalPrice.toLocaleString('es-AR')}`, 'DELIVERY')
         for (const alert of lowStockAlerts) {
             await sendGlobalNotification(user.id, "⚠️ Stock Crítico", `El insumo ${alert.name} se está agotando (${alert.stock.toFixed(1)} restantes)`, 'STOCK')
         }
-    } catch (notifErr) { console.error("Error en notificaciones:", notifErr) }
+    } catch (notifErr) { console.error("Push Error:", notifErr) }
 
     revalidatePath("/dashboard/pedidos")
     revalidatePath("/dashboard/stock")
 }
 
 /**
- * 2. REGISTRAR PAGO ADICIONAL
+ * 2. REGISTRAR PAGO ADICIONAL (Cobros parciales)
  */
 export async function addPayment(orderId: string, formData: FormData) {
     const supabase = await createClient()
@@ -139,6 +141,7 @@ export async function addPayment(orderId: string, formData: FormData) {
 
 /**
  * 3. CONFIRMAR PRESUPUESTO
+ * Pasa a pedido firme, resta stock y pide fecha obligatoria.
  */
 export async function confirmOrder(orderId: string, formData: FormData) {
     const supabase = await createClient()
@@ -171,7 +174,12 @@ export async function confirmOrder(orderId: string, formData: FormData) {
             }
             await tx.order.update({
                 where: { id: orderId },
-                data: { status: 'CONFIRMADO', deliveryDate: new Date(deliveryDate), designDetails: designDetails || order.designDetails, images: { create: imageUrls.map(url => ({ url })) } }
+                data: { 
+                    status: 'CONFIRMADO', 
+                    deliveryDate: new Date(deliveryDate), 
+                    designDetails: designDetails || order.designDetails, 
+                    images: { create: imageUrls.map(url => ({ url })) } 
+                }
             })
         })
 
@@ -200,30 +208,75 @@ export async function updateOrder(orderId: string, formData: FormData) {
     const deliveryDateRaw = formData.get("deliveryDate") as string
     const files = formData.getAll("files") as File[]
 
+    const order = await prisma.order.findUnique({
+        where: { id: orderId, userId: user.id },
+        include: { items: { include: { template: { include: { materials: true } } } } }
+    })
+    if (!order) return
+
     const imageUrls = await uploadImages(files, user.id)
 
-    await prisma.order.update({
-        where: { id: orderId, userId: user.id },
-        data: {
-            customerName, customerPhone, designDetails, status,
-            deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
-            images: { create: imageUrls.map(url => ({ url })) }
+    await prisma.$transaction(async (tx) => {
+        // Si cambia de presupuesto a confirmado ahora, restamos stock
+        if (order.status === "PRESUPUESTADO" && status !== "PRESUPUESTADO") {
+            for (const item of order.items) {
+                for (const m of item.template.materials) {
+                    await tx.material.update({ where: { id: m.materialId }, data: { stock: { decrement: m.quantity * item.quantity } } })
+                }
+            }
         }
+
+        await tx.order.update({
+            where: { id: orderId },
+            data: {
+                customerName, customerPhone, designDetails, status,
+                deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
+                images: { create: imageUrls.map(url => ({ url })) }
+            }
+        })
     })
+
     revalidatePath("/dashboard/pedidos")
+    revalidatePath("/dashboard/stock")
 }
 
 /**
- * 5. MARCAR ENTREGADO
+ * 5. MARCAR COMO ENTREGADO
+ * Cierra el ciclo y avisa si el cliente todavía debe dinero.
  */
 export async function markAsDelivered(id: string) {
-    const order = await prisma.order.update({ where: { id }, data: { status: 'ENTREGADO' } })
+    const order = await prisma.order.findUnique({
+        where: { id },
+        include: { payments: true }
+    })
+    if (!order) return
+
+    const totalPaid = order.payments.reduce((acc, p) => acc + p.amount, 0)
+    const remaining = order.totalPrice - totalPaid
+
+    await prisma.order.update({ 
+        where: { id }, 
+        data: { status: 'ENTREGADO' } 
+    })
+    
+    // Notificación Estándar
     await sendGlobalNotification(order.userId, "🏁 Trabajo Entregado", `El pedido de ${order.customerName} fue finalizado.`, 'DELIVERY')
+
+    // ALERTA DE DEUDA: Si entregó pero no cobró todo
+    if (remaining > 0) {
+        await sendGlobalNotification(
+            order.userId, 
+            "🚩 ¡Saldo Pendiente!", 
+            `Entregaste el trabajo pero ${order.customerName} aún debe $${remaining.toLocaleString('es-AR')}`, 
+            'PAYMENT'
+        )
+    }
+
     revalidatePath("/dashboard/pedidos")
 }
 
 /**
- * 6. BORRADO DE IMAGEN / PEDIDO
+ * 6. BORRAR IMAGEN INDIVIDUAL
  */
 export async function deleteOrderImage(imageId: string, imageUrl: string) {
     const supabase = await createClient()
@@ -233,22 +286,42 @@ export async function deleteOrderImage(imageId: string, imageUrl: string) {
     revalidatePath("/dashboard/pedidos")
 }
 
+/**
+ * 7. ELIMINAR PEDIDO COMPLETO
+ * Borra de la DB, limpia Storage y DEVUELVE los materiales al stock.
+ */
 export async function deleteOrder(id: string) {
-    const order = await prisma.order.findUnique({ where: { id }, include: { images: true, items: { include: { template: { include: { materials: true } } } } } })
+    const order = await prisma.order.findUnique({ 
+        where: { id }, 
+        include: { images: true, items: { include: { template: { include: { materials: true } } } } } 
+    })
     if (!order) return
+
     await prisma.$transaction(async (tx) => {
+        // Solo devolvemos si el pedido no era un presupuesto (es decir, si ya se había restado)
         if (order.status !== "PRESUPUESTADO") {
             for (const item of order.items) {
                 for (const m of item.template.materials) {
-                    await tx.material.update({ where: { id: m.materialId }, data: { stock: { increment: m.quantity * item.quantity } } })
+                    await tx.material.update({ 
+                        where: { id: m.materialId }, 
+                        data: { stock: { increment: m.quantity * item.quantity } } 
+                    })
                 }
             }
         }
+        
+        const supabase = await createClient()
+        for (const img of order.images) {
+            const path = img.url.split('/public/disenos/')[1]
+            if (path) await supabase.storage.from('disenos').remove([path])
+        }
+
         await tx.payment.deleteMany({ where: { orderId: id } })
         await tx.orderImage.deleteMany({ where: { orderId: id } })
         await tx.orderItem.deleteMany({ where: { orderId: id } })
         await tx.order.delete({ where: { id } })
     })
+
     revalidatePath("/dashboard/pedidos")
     revalidatePath("/dashboard/stock")
 }
