@@ -32,7 +32,7 @@ export default async function InversionPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-32 pt-6 px-2 md:px-4">
       <header className="px-2">
-        <h1 className="text-[10px] font-black uppercase text-[#f13d4b] tracking-[0.4em] mb-1 italic">Capital y Compras</h1>
+        <h1 className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic">Capital y Compras</h1>
         <h2 className="text-4xl font-black text-black tracking-tighter uppercase">Inversión</h2>
       </header>
 
@@ -47,7 +47,7 @@ export default async function InversionPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                 <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-zinc-400 ml-2">Insumo adquirido</label>
-                    <select name="materialId" className="w-full p-4 bg-zinc-50 border-none rounded-2xl font-bold outline-none focus:ring-2 focus:ring-[#f13d4b] appearance-none cursor-pointer" required>
+                    <select name="materialId" className="w-full p-4 bg-zinc-50 border-none rounded-2xl font-bold outline-none focus:ring-2 focus:ring-accent appearance-none cursor-pointer" required>
                         <option value="">Seleccionar...</option>
                         {materials.filter(m => m.type !== 'Máquina').map(m => (
                             <option key={m.id} value={m.id}>{m.name} (Actual: ${m.unitPrice})</option>
@@ -76,7 +76,7 @@ export default async function InversionPage() {
             <h3 className="text-4xl md:text-5xl font-black tracking-tighter leading-none break-all">
                 ${totalInvested.toLocaleString('es-AR')}
             </h3>
-            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#f13d4b] rounded-full blur-[80px] opacity-20" />
+            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-accent rounded-full blur-[80px] opacity-20" />
         </div>
 
         <div className="bg-white rounded-[45px] p-8 md:p-10 border-2 border-zinc-100 shadow-sm flex flex-col justify-between">
@@ -95,7 +95,7 @@ export default async function InversionPage() {
       {/* HISTORIAL */}
       <section className="space-y-6">
         <h3 className="font-black uppercase text-xs tracking-widest ml-6 flex items-center gap-2">
-            <History size={16} className="text-[#f13d4b]" /> Registro de Movimientos
+            <History size={16} className="text-accent" /> Registro de Movimientos
         </h3>
         
         {/* VISTA MÓVIL */}
@@ -129,7 +129,7 @@ export default async function InversionPage() {
                             <td suppressHydrationWarning className="p-8 text-sm font-bold text-zinc-400">{new Date(p.createdAt).toLocaleDateString()}</td>
                             <td className="p-8 text-sm font-black uppercase text-black">{p.material.name}</td>
                             <td className="p-8 text-sm font-bold text-zinc-500 text-center">{p.quantity} {p.material.unit}</td>
-                            <td className="p-8 text-lg font-black text-right text-black group-hover:text-[#f13d4b] transition-colors">${p.totalAmount.toLocaleString('es-AR')}</td>
+                            <td className="p-8 text-lg font-black text-right text-black group-hover:text-accent transition-colors">${p.totalAmount.toLocaleString('es-AR')}</td>
                         </tr>
                     ))}
                 </tbody>
