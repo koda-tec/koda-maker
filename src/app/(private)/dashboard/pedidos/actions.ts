@@ -78,6 +78,16 @@ export async function createOrder(formData: FormData) {
             }
         })
 
+        // Dentro de la acción createOrder, después de crear el pedido:
+        await tx.notification.create({
+            data: {
+                title: "Nuevo Pedido Confirmado",
+                message: `Se registró un pedido de ${customerName}`,
+                type: 'DELIVERY',
+                userId: user.id
+            }
+        })
+
         if (status !== "PRESUPUESTADO") {
             for (const item of template.materials) {
                 await tx.material.update({

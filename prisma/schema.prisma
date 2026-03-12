@@ -24,8 +24,21 @@ model User {
   templates     ProductTemplate[]
   orders        Order[]
   purchases     Purchase[] 
+  notifications Notification[]
 
 }
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   // 'STOCK', 'DELIVERY', 'PAYMENT'
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
 
 model Purchase {
   id          String   @id @default(cuid())
