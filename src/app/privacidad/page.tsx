@@ -30,7 +30,7 @@ export default function PrivacyPage() {
                 <Database size={20} className="text-accent" /> Almacenamiento de Datos
             </h2>
             <p>
-              En **KODA Maker**, la privacidad de tu taller es nuestra prioridad. Todos los datos de materiales, clientes y facturación se almacenan de forma segura en servidores cifrados (Powered by Supabase). Tu información es privada y solo tú tienes acceso a ella mediante tus credenciales de autenticación.
+              En KODA Maker, la privacidad de tu taller es nuestra prioridad. Todos los datos de materiales, clientes y facturación se almacenan de forma segura en servidores cifrados (Powered by Supabase). Tu información es privada y solo tú tienes acceso a ella mediante tus credenciales de autenticación.
             </p>
           </div>
 
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
 
         <footer className="pt-10 border-t border-gray-100">
             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                Para dudas sobre tus datos, contacta a <a href="mailto:soporte@kodatec.app" className="text-accent underline">soporte@kodatec.app</a>
+                Para dudas sobre tus datos, contacta a <a href="mailto:kodasoftwar3@gmail.com" className="text-accent underline">soporte@kodatec.app</a>
             </p>
         </footer>
       </main>

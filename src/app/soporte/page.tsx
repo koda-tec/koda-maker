@@ -28,7 +28,7 @@ export default function SupportPage() {
             
             {/* WhatsApp */}
             <a 
-                href="https://wa.me/5491100000000" // REEMPLAZA CON TU NÚMERO
+                href="https://wa.me/3816458489" 
                 target="_blank"
                 className="md:col-span-2 bg-zinc-950 rounded-[45px] p-10 text-white flex flex-col justify-between hover:scale-[1.02] transition-all shadow-2xl relative overflow-hidden group"
             >
@@ -46,7 +46,7 @@ export default function SupportPage() {
                 <Mail size={40} className="text-black" />
                 <div>
                     <h3 className="text-xl font-black uppercase tracking-tighter">Email</h3>
-                    <p className="text-zinc-400 text-sm font-medium mt-2">soporte@kodatec.app</p>
+                    <p className="text-zinc-400 text-sm font-medium mt-2">kodasoftwar3@gmail.com</p>
                 </div>
             </div>
 
