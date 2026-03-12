@@ -19,19 +19,20 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // IMPORTANTE: Solo verificamos la sesión, no pedimos el usuario completo al Auth de Supabase.
-  // getUser() es una llamada de red extra que suma 300ms. getSession() es mucho más rápido.
-  const { data: { session } } = await supabase.auth.getSession()
+  // IMPORTANTE: getUser() es más seguro que getSession() para evitar "tokens fantasma"
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
-  const isHomePage = request.nextUrl.pathname === '/'
-  const isDashboard = request.nextUrl.pathname.startsWith('/dashboard')
+  const url = new URL(request.url)
+  const isAuthPage = url.pathname.startsWith('/login')
+  const isDashboard = url.pathname.startsWith('/dashboard')
 
-  if (!session && isDashboard) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  // Si no hay usuario y quiere entrar al dashboard -> Al login
+  if (!user && isDashboard) {
+    return NextResponse.redirect(new URL('/login?mode=login', request.url))
   }
 
-  if (session && isAuthPage) {
+  // Si hay usuario y quiere ir al login -> Al dashboard (rompemos el bucle)
+  if (user && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -39,5 +40,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'], // Solo protegemos lo necesario para no frenar el Home
+  matcher: ['/dashboard/:path*', '/login'],
 }

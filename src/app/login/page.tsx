@@ -16,6 +16,22 @@ function LoginContent() {
   const [loading, setLoading] = useState(false)
   
   const supabase = createClient()
+  useEffect(() => {
+  // Si el usuario llega al login, nos aseguramos de que Supabase limpie 
+  // cualquier resto de sesión vieja en el navegador.
+  const clearGhostSession = async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      await supabase.auth.signOut();
+      window.location.reload(); // Recarga una vez para limpiar el estado de React
+    }
+  }
+  
+  // Solo lo hacemos si el usuario no viene redirigido por el middleware exitosamente
+  if (mode === 'login') {
+    clearGhostSession();
+  }
+}, [mode]);
   const router = useRouter()
 
   useEffect(() => {
