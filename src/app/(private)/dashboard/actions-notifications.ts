@@ -41,8 +41,11 @@ export async function sendGlobalNotification(userId: string, title: string, mess
     try {
         const subs = await prisma.pushSubscription.findMany({ where: { userId } })
         
-        const payload = JSON.stringify({ title, message })
-
+        const payload = JSON.stringify({ 
+            title: title, 
+            body: message, // Cambiamos 'message' por 'body'
+            url: '/dashboard/pedidos' 
+        });
         for (const sub of subs) {
             try {
                 await webpush.sendNotification({
