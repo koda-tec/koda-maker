@@ -1,7 +1,9 @@
-// src/app/layout.tsx
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google"
 import "./globals.css";
-import { Toaster } from 'sonner'
+import { Toaster } from "sonner";
+
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Koda Maker — Gestión Pro",
@@ -10,11 +12,11 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     apple: "/icon-192x192.png",
-  }
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -28,9 +30,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body suppressHydrationWarning className="antialiased">
+      <body className={`${inter.className} antialiased`} suppressHydrationWarning>
         {children}
-        <Toaster position="top-center" richColors /> {/* Toaster aquí */}
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );
