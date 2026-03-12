@@ -17,7 +17,7 @@ import {
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { NotificationCenter } from "@/components/NotificationCenter"
-
+import { sendTestPush } from "./actions-notifications"
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -117,7 +117,13 @@ export default async function DashboardPage() {
                 </h2>
             </div>
         </div>
-
+<div className="px-4 mb-4">
+    <form action={async () => { "use server"; await sendTestPush() }}>
+        <button className="w-full py-4 bg-zinc-100 border border-zinc-200 rounded-3xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:bg-zinc-200 transition-all active:scale-95">
+            🔔 Probar Notificación Push
+        </button>
+    </form>
+</div>
         <div className="flex items-center gap-3">
             {/* CAMPANITA DE NOTIFICACIONES */}
             <NotificationCenter notifications={notifications} />

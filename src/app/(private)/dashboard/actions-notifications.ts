@@ -74,3 +74,15 @@ export async function clearAllNotifications() {
     await prisma.notification.deleteMany({ where: { userId: user.id } })
     revalidatePath("/dashboard")
 }
+export async function sendTestPush() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    await sendGlobalNotification(
+        user.id, 
+        "🚀 ¡Koda Maker en vivo!", 
+        "Esta es una notificación de prueba. ¡Tu sistema está conectado!", 
+        "DELIVERY"
+    )
+}
