@@ -69,10 +69,6 @@ const handleAuth = async () => {
           </h1>
           <p className="text-zinc-400 text-xs font-bold uppercase tracking-widest mt-2">Professional Maker Suite</p>
         </div>
-          <h1 className="text-3xl font-black tracking-tighter">
-            {isRegistering ? "CREAR CUENTA" : "BIENVENIDO"}
-          </h1>
-          <p className="text-gray-400 text-sm font-medium">KODA MAKER SYSTEM</p>
         </div>
 
         <div className="space-y-3">
