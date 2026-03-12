@@ -4,17 +4,21 @@ import { createClient } from "@/lib/supabase-server"
 import { revalidatePath } from "next/cache"
 import webpush from 'web-push'
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
+// Configuramos las llaves solo si existen
+if (process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+    webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT || 'mailto:admin@koda.com',
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+    )
+}
 
 export async function subscribeUser(subscription: any) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    // Guardamos la suscripción del navegador en la base de datos
     await prisma.pushSubscription.upsert({
         where: { endpoint: subscription.endpoint },
         update: {},
@@ -27,32 +31,39 @@ export async function subscribeUser(subscription: any) {
     })
 }
 
-// FUNCIÓN MAESTRA: Envía a la DB y al Celular
 export async function sendGlobalNotification(userId: string, title: string, message: string, type: string) {
-    // 1. Guardar en la DB (lo que ya hacíamos)
+    // 1. Siempre guardamos en la tabla de notificaciones interna (la campanita)
     await prisma.notification.create({
         data: { title, message, type, userId }
     })
 
-    // 2. Buscar dispositivos suscritos
-    const subs = await prisma.pushSubscription.findMany({ where: { userId } })
+    // 2. Intentamos enviar el Push al celular
+    try {
+        const subs = await prisma.pushSubscription.findMany({ where: { userId } })
+        
+        const payload = JSON.stringify({ title, message })
 
-    // 3. Enviar Push real
-    const payload = JSON.stringify({ title, message })
-    
-    subs.forEach(sub => {
-        webpush.sendNotification({
-            endpoint: sub.endpoint,
-            keys: { auth: sub.auth, p256dh: sub.p256dh }
-        }, payload).catch(err => console.error("Error enviando push", err))
-    })
+        for (const sub of subs) {
+            try {
+                await webpush.sendNotification({
+                    endpoint: sub.endpoint,
+                    keys: { auth: sub.auth, p256dh: sub.p256dh }
+                }, payload)
+            } catch (error: any) {
+                // Si el token expiró o es inválido, borramos la suscripción
+                if (error.statusCode === 410 || error.statusCode === 404) {
+                    await prisma.pushSubscription.delete({ where: { id: sub.id } })
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error silencioso en Push:", err)
+        // No lanzamos error para que la App no se bloquee (Pantalla blanca)
+    }
 }
 
 export async function markAsRead(id: string) {
-    await prisma.notification.update({
-        where: { id },
-        data: { read: true }
-    })
+    await prisma.notification.update({ where: { id }, data: { read: true } })
     revalidatePath("/dashboard")
 }
 
@@ -60,9 +71,6 @@ export async function clearAllNotifications() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-
-    await prisma.notification.deleteMany({
-        where: { userId: user.id }
-    })
+    await prisma.notification.deleteMany({ where: { userId: user.id } })
     revalidatePath("/dashboard")
 }
