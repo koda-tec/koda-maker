@@ -10,7 +10,11 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// --- MODELO DE USUARIO (SaaS Ready) ---
+enum PlanType {
+  FREE    // 7 días de prueba o limitado
+  PRO     // Suscripción mensual activa
+  EXPIRED // Falta de pago
+}
 
 model User {
   id            String    @id @default(cuid())
@@ -19,6 +23,12 @@ model User {
   logoUrl       String?   
   createdAt     DateTime  @default(now())
   
+    // --- CAMPOS DE SUSCRIPCIÓN ---
+  plan               PlanType  @default(FREE)
+  subscriptionId     String?   // ID de suscripción de Mercado Pago
+  customerMpId       String?   // ID de cliente en Mercado Pago
+  validUntil         DateTime? // Hasta cuándo tiene acceso
+
   // Relaciones
   materials     Material[]
   templates     ProductTemplate[]
