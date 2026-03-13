@@ -38,22 +38,23 @@ export async function registerPurchase(formData: FormData) {
                 },
                 include: { items: { include: { template: { include: { materials: true } } } } }
             })
-
             for (const order of pendingOrders) {
-                let newTotalCost = 0
+                let newTotalInternalCost = 0; // Solo para nuestra analítica
                 for (const item of order.items) {
-                    const itemQty = item.quantity
                     for (const tm of item.template.materials) {
-                        // Buscamos el precio fresquito del material que acabamos de actualizar
-                        const currentMat = await tx.material.findUnique({ where: { id: tm.materialId } })
-                        newTotalCost += (tm.quantity * (currentMat?.unitPrice || 0) * itemQty)
+                        const mat = await tx.material.findUnique({ where: { id: tm.materialId } });
+                        newTotalInternalCost += (tm.quantity * (mat?.unitPrice || 0) * item.quantity);
                     }
                 }
-                // Guardamos el nuevo costo total del pedido basado en los nuevos precios
+
+                // ACTUALIZAMOS SOLO EL COSTO
                 await tx.order.update({
                     where: { id: order.id },
-                    data: { totalCost: newTotalCost }
-                })
+                    data: { 
+                        totalCost: newTotalInternalCost 
+                        // totalPrice NO se toca aquí, queda igual a lo pactado.
+                    }
+                });
             }
         })
 
