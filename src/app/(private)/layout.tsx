@@ -5,19 +5,24 @@ import { createClient } from "@/lib/supabase-server"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 
+// --- ESTA LÍNEA ES LA CLAVE ---
+// Obliga a Next.js a ejecutar este archivo en cada clic/refresco
+export const dynamic = 'force-dynamic' 
+// ------------------------------
+
 export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect("/login")
 
-  // CONSULTA DIRECTA CON PRISMA (100% confiable)
+  // Consultamos el plan siempre (ahora es instantáneo gracias a force-dynamic)
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { plan: true }
   })
 
-  // SI EL PLAN ES EXPIRED, REDIRIGIR FUERA DEL DASHBOARD
+  // Si el plan es EXPIRED, lo sacamos volando del dashboard
   if (dbUser?.plan === 'EXPIRED') {
     redirect("/pago-requerido")
   }
