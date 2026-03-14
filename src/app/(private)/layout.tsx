@@ -1,8 +1,27 @@
 import { Navigation } from "@/components/Navigation"
 import { Suspense } from "react"
 import { PushLoader } from "@/components/PushLoader" 
+import { createClient } from "@/lib/supabase-server"
+import prisma from "@/lib/prisma"
+import { redirect } from "next/navigation"
 
-export default function PrivateLayout({ children }: { children: React.ReactNode }) {
+export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect("/login")
+
+  // CONSULTA DIRECTA CON PRISMA (100% confiable)
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { plan: true }
+  })
+
+  // SI EL PLAN ES EXPIRED, REDIRIGIR FUERA DEL DASHBOARD
+  if (dbUser?.plan === 'EXPIRED') {
+    redirect("/pago-requerido")
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] md:pl-20 pb-24 md:pb-0">
       <PushLoader />

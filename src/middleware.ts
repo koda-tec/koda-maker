@@ -3,7 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
-    request: { headers: request.headers },
+    request: {
+      headers: request.headers,
+    },
   })
 
   const supabase = createServerClient(
@@ -11,45 +13,37 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
+        getAll() {
+          return request.cookies.getAll()
+        },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          response = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+          response = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
         },
       },
     }
   )
 
+  // IMPORTANTE: getUser() es una llamada al servidor de Supabase.
+  // Valida el token real. Si el token es viejo o no existe, devuelve null.
   const { data: { user } } = await supabase.auth.getUser()
-  const url = new URL(request.url)
-  
-  // Rutas clave
-  const isDashboard = url.pathname.startsWith('/dashboard')
-  const isPaymentPage = url.pathname === '/dashboard/pago-requerido'
-  const isAuthPage = url.pathname.startsWith('/login')
 
-  // 1. Si no está logueado y va al dashboard -> Al Login
+  const url = new URL(request.url)
+  const isAuthPage = url.pathname.startsWith('/login')
+  const isDashboard = url.pathname.startsWith('/dashboard')
+
+  // CASO 1: No hay usuario y quiere entrar a zonas privadas -> Al Login
   if (!user && isDashboard) {
     return NextResponse.redirect(new URL('/login?mode=login', request.url))
   }
 
-  // 2. Si está logueado, chequeamos el plan
-  if (user && isDashboard && !isPaymentPage) {
-    // Consultamos el plan. IMPORTANTE: El nombre de la tabla debe coincidir con Supabase
-    const { data: dbUser } = await supabase
-      .from('User')
-      .select('plan')
-      .eq('id', user.id)
-      .single()
-
-    // Si el plan es EXPIRED, bloqueamos el acceso
-    if (dbUser?.plan === 'EXPIRED') {
-      return NextResponse.redirect(new URL('/dashboard/pago-requerido', request.url))
-    }
-  }
-
-  // 3. Si está logueado y va al login -> Al Dashboard
+  // CASO 2: Hay usuario y quiere ir al Login -> Lo mandamos al Dashboard 
+  // (Si el usuario quiere entrar con OTRA cuenta, debe cerrar sesión primero)
   if (user && isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
@@ -58,10 +52,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Corregido: Ahora escucha /dashboard, /dashboard/algo, y /login
-  matcher: [
-    '/dashboard', 
-    '/dashboard/:path*', 
-    '/login'
-  ],
+  // Vigilamos Dashboard y Login. 
+  // Excluimos /pago-requerido para que no haya bucles de redirección.
+  matcher: ['/dashboard/:path*', '/login'],
 }

@@ -1,4 +1,4 @@
-import { getSubscriptionLink } from "../config/actions-mp"
+import { getSubscriptionLink } from "../(private)/dashboard/config/actions-mp"
 import { Check, Zap, Crown, ShieldCheck, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
