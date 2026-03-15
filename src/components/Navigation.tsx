@@ -33,7 +33,7 @@ export function Navigation() {
         {/* LOGO KODA (PC) */}
         <div className="hidden md:flex mb-6 transition-transform hover:scale-110 duration-300">
           <Link href="/dashboard">
-            <img src="/icon-192x192.png" alt="K" className="w-12 h-12 rounded-2xl shadow-lg border border-zinc-100 bg-black" />
+            <img src="/icon-192x192.png" alt="K" className="w-12 h-12 rounded-2xl shadow-lg border border-zinc-100 bg-white" />
           </Link>
         </div>
 
