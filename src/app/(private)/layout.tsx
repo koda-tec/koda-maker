@@ -24,7 +24,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
 
   // Si el plan es EXPIRED, lo sacamos volando del dashboard
   if (dbUser?.plan === 'EXPIRED') {
-    redirect("/pago-requerido")
+    redirect("/dashboard/pago-requerido")
   }
 
   return (
