@@ -133,6 +133,8 @@ model Order {
   totalPrice     Float       @default(0)
   designDetails  String?     
   notes          String?
+  pickupTime      String?   
+  trackingUrl     String?
   
   // --- DATOS DE LOGÍSTICA ---
   deliveryMethod DeliveryMethod @default(PICKUP)

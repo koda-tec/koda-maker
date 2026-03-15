@@ -9,17 +9,19 @@ import {
   Settings, 
   BookOpen, 
   Landmark,
-  Store // <-- Nuevo icono
+  Store,
+  Truck
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const menuItems = [
   { name: "Inicio", href: "/dashboard", icon: LayoutDashboard },
   { name: "Pedidos", href: "/dashboard/pedidos", icon: ShoppingCart },
+  { name: "Logística", href: "/dashboard/logistica", icon: Truck }, 
   { name: "Plantillas", href: "/dashboard/templates", icon: BookOpen },
   { name: "Stock", href: "/dashboard/stock", icon: Package },
   { name: "Inversión", href: "/dashboard/inversion", icon: Landmark },
-  { name: "Mi Tienda", href: "/dashboard/tienda", icon: Store }, // <-- Nueva sección
+  { name: "Mi Tienda", href: "/dashboard/tienda", icon: Store }, 
   { name: "Reportes", href: "/dashboard/reportes", icon: BarChart3 },
 ]
 
