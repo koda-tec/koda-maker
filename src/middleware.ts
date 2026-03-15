@@ -54,5 +54,8 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Vigilamos Dashboard y Login. 
   // Excluimos /pago-requerido para que no haya bucles de redirección.
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: [
+    '/dashboard((?!/pago-requerido).*)', 
+    '/login'
+  ],
 }
