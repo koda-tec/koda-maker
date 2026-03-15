@@ -3,6 +3,25 @@ import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { ClientCustomizer } from "./ClientCustomizer"
+import type { Metadata } from "next"
+
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+    const { slug } = await params
+    // Buscamos al dueño de la tienda por su slug
+    const user = await prisma.user.findUnique({ where: { slug } })
+
+    return {
+        title: user?.name || "Tienda Online",
+        description: `Bienvenido a la tienda de ${user?.name}. Diseños personalizados en 3D y Láser.`,
+        // USAMOS EL LOGO DEL EMPRENDEDOR COMO FAVICON PARA ESTA PÁGINA
+        icons: {
+            icon: user?.logoUrl || "/favicon.ico", 
+            apple: user?.logoUrl || "/icon-192x192.png",
+        }
+    }
+}
+
 
 export default async function PublicProductPage({ params }: { params: Promise<{ slug: string, templateId: string }> }) {
     const { slug, templateId } = await params
