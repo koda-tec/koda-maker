@@ -8,7 +8,8 @@ import {
   BarChart3, 
   Settings, 
   BookOpen, 
-  Landmark 
+  Landmark,
+  Store // <-- Nuevo icono
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -17,7 +18,8 @@ const menuItems = [
   { name: "Pedidos", href: "/dashboard/pedidos", icon: ShoppingCart },
   { name: "Plantillas", href: "/dashboard/templates", icon: BookOpen },
   { name: "Stock", href: "/dashboard/stock", icon: Package },
-  { name: "Inversión", href: "/dashboard/inversion", icon: Landmark }, 
+  { name: "Inversión", href: "/dashboard/inversion", icon: Landmark },
+  { name: "Mi Tienda", href: "/dashboard/tienda", icon: Store }, // <-- Nueva sección
   { name: "Reportes", href: "/dashboard/reportes", icon: BarChart3 },
 ]
 
@@ -25,15 +27,16 @@ export function Navigation() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-white border-t border-gray-100 px-2 pb-4 md:top-0 md:left-0 md:w-20 md:h-screen md:border-t-0 md:border-r md:flex-col md:py-8 md:px-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
-      <div className="flex h-full items-center justify-around md:flex-col md:justify-start md:gap-8">
+    <nav className="fixed bottom-0 left-0 z-50 w-full h-20 bg-white border-t border-gray-100 px-1 pb-4 md:top-0 md:left-0 md:w-20 md:h-screen md:border-t-0 md:border-r md:flex-col md:py-8 md:px-0 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+      <div className="flex h-full items-center justify-around md:flex-col md:justify-start md:gap-6">
         
-        {/* LOGO KODA (Solo visible en PC) */}
+        {/* LOGO KODA (PC) */}
         <div className="hidden md:flex mb-6 transition-transform hover:scale-110 duration-300">
           <Link href="/dashboard">
-            <img src="/icon-192x192.png" alt="K" className="w-14 h-14 rounded-2xl shadow-lg border border-zinc-100" />
+            <img src="/icon-192x192.png" alt="K" className="w-12 h-12 rounded-2xl shadow-lg border border-zinc-100 bg-black" />
           </Link>
         </div>
+
         {menuItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -50,12 +53,12 @@ export function Navigation() {
             >
               <div className={cn(
                 "p-2 rounded-2xl transition-all duration-300",
-                isActive ? "bg-red-50 scale-110 shadow-sm" : "bg-transparent hover:bg-gray-50"
+                isActive ? "bg-red-50 scale-110" : "bg-transparent hover:bg-gray-50"
               )}>
-                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
               </div>
               <span className={cn(
-                "text-[8px] font-black uppercase tracking-tighter md:hidden transition-all",
+                "text-[7px] font-black uppercase tracking-tighter md:hidden transition-all",
                 isActive ? "opacity-100" : "opacity-60"
               )}>
                 {item.name}
@@ -64,7 +67,7 @@ export function Navigation() {
           )
         })}
         
-        {/* AJUSTES / CONFIG AL FINAL */}
+        {/* CONFIGURACIÓN */}
         <div className="md:mt-auto">
             <Link 
               href="/dashboard/config" 
@@ -73,7 +76,7 @@ export function Navigation() {
                 pathname === "/dashboard/config" ? "text-black bg-gray-100" : "text-gray-300 hover:text-black"
               )}
             >
-                <Settings size={22} />
+                <Settings size={20} />
             </Link>
         </div>
       </div>

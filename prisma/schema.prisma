@@ -1,7 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
-  previewFeatures = ["relationJoins"] // <--- AGREGÁ ESTA LÍNEA
-
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -10,58 +9,162 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// --- ENUMS ---
+
 enum PlanType {
-  FREE    // 7 días de prueba o limitado
-  PRO     // Suscripción mensual activa
-  EXPIRED // Falta de pago
+  FREE
+  PRO
+  EXPIRED
 }
+
+enum OrderStatus {
+  PRESUPUESTADO
+  CONFIRMADO
+  EN_PROCESO
+  LISTO
+  ENTREGADO
+  CANCELADO
+  RECHAZADO // Nuevo: Para que el dueño pueda cancelar pedidos de la web
+}
+
+enum DeliveryMethod {
+  PICKUP      // Retiro por taller
+  LOCAL       // Envío local (precio fijo definido por el usuario)
+  NATIONWIDE  // Envío a todo el país (a convenir)
+}
+
+// --- MODELOS ---
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  logoUrl       String?   
-  createdAt     DateTime  @default(now())
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String?   // Nombre del emprendimiento
+  logoUrl            String?
+  createdAt          DateTime  @default(now())
   
-    // --- CAMPOS DE SUSCRIPCIÓN ---
+  // --- CONFIGURACIÓN DE TIENDA PÚBLICA ---
+  slug               String?   @unique // URL: koda-maker.app/v/syg-creaciones
+  isStoreActive      Boolean   @default(false)
+  storeDescription   String?   @db.Text
+  localShippingCost  Float     @default(0)
+  allowPickup        Boolean   @default(true)
+  allowNationwide    Boolean   @default(true)
+
+  // --- SISTEMA DE SUSCRIPCIÓN SaaS ---
   plan               PlanType  @default(FREE)
-  subscriptionId     String?   // ID de suscripción de Mercado Pago
-  customerMpId       String?   // ID de cliente en Mercado Pago
-  validUntil         DateTime? // Hasta cuándo tiene acceso
-
+  subscriptionId     String?   
+  customerMpId       String?   
+  validUntil         DateTime? 
+  
   // Relaciones
-  materials     Material[]
-  templates     ProductTemplate[]
-  orders        Order[]
-  purchases     Purchase[] 
-  notifications Notification[]
-  pushSubscriptions PushSubscription[]
-
+  materials          Material[]
+  templates          ProductTemplate[]
+  orders             Order[]
+  purchases          Purchase[]
+  notifications      Notification[]
+  pushSubscriptions  PushSubscription[]
 }
 
-model PushSubscription {
-  id        String   @id @default(cuid())
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
-  createdAt DateTime @default(now())
+model Material {
+  id           String   @id @default(cuid())
+  name         String
+  type         String   // Láser, 3D, Insumo, Máquina
+  unit         String   // gr, m, un, min
+  unitPrice    Float    
+  stock        Float    @default(0)
+  minStock     Float    @default(0)
   
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  title     String
-  message   String
-  type      String   // 'STOCK', 'DELIVERY', 'PAYMENT'
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
   
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  templates    TemplateMaterial[]
+  purchases    Purchase[]
 }
 
+model ProductTemplate {
+  id             String   @id @default(cuid())
+  name           String
+  category       String
+  basePrice      Float    
+  targetMargin   Float    @default(50) 
+  machineTimeMin Int      @default(0)
+
+  // --- CONFIGURACIÓN E-COMMERCE ---
+  isPublic          Boolean @default(false)
+  publicDescription String? @db.Text
+  publicImage       String? // Imagen de portada para la tienda
+
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  
+  materials      TemplateMaterial[]
+  orderItems     OrderItem[]
+}
+
+model TemplateMaterial {
+  id         String          @id @default(cuid())
+  quantity   Float           
+  
+  template   ProductTemplate @relation(fields: [templateId], references: [id])
+  templateId String
+  material   Material        @relation(fields: [materialId], references: [id])
+  materialId String
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    Int         @unique @default(autoincrement())
+  customerName   String
+  customerPhone  String?     
+  status         OrderStatus @default(PRESUPUESTADO)
+  createdAt      DateTime    @default(now())
+  deliveryDate   DateTime?
+  totalCost      Float       @default(0)
+  totalPrice     Float       @default(0)
+  designDetails  String?     
+  notes          String?
+  
+  // --- DATOS DE LOGÍSTICA ---
+  deliveryMethod DeliveryMethod @default(PICKUP)
+  shippingCost   Float          @default(0)
+  shippingAddress String?       @db.Text
+  isFromStore    Boolean        @default(false) // Para saber si vino de la web pública
+
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  
+  items          OrderItem[]
+  payments       Payment[]   
+  images         OrderImage[]
+}
+
+model OrderImage {
+  id      String @id @default(cuid())
+  url     String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+}
+
+model OrderItem {
+  id           String          @id @default(cuid())
+  quantity     Int
+  customPrice  Float           
+  
+  order        Order           @relation(fields: [orderId], references: [id])
+  orderId      String
+  template     ProductTemplate @relation(fields: [templateId], references: [id])
+  templateId   String
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  amount    Float
+  date      DateTime @default(now())
+  method    String   
+  
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+}
 
 model Purchase {
   id          String   @id @default(cuid())
@@ -77,113 +180,25 @@ model Purchase {
   user        User     @relation(fields: [userId], references: [id])
 }
 
-
-// --- MATERIALES ---
-
-model Material {
-  id           String   @id @default(cuid())
-  name         String
-  type         String   // Láser, 3D, Insumo, etc.
-  unit         String   // gr, m, unidad, min
-  unitPrice    Float    // Costo de compra por unidad
-  stock        Float    @default(0)
-  minStock     Float    @default(0)
-  
-  // Relación con Usuario
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
-  
-  // Relación con Plantillas
-  templates    TemplateMaterial[]
-  purchases    Purchase[]
-}
-
-// --- PLANTILLAS DE PRODUCTOS (Recetas) ---
-
-model ProductTemplate {
-  id             String   @id @default(cuid())
-  name           String
-  category       String
-  basePrice      Float    // Este será el "Precio Final" que ellos elijan
-  targetMargin   Float    @default(50) // Porcentaje de ganancia deseado (ej: 50%)
-  machineTimeMin Int      // Tiempo estimado de uso de máquina
-  
-  // Relación con Usuario
-  userId         String
-  user         User     @relation(fields: [userId], references: [id])
-  
-  // Relaciones
-  materials      TemplateMaterial[]
-  orderItems     OrderItem[]
-}
-
-// Relación muchos a muchos: Materiales usados en una plantilla
-model TemplateMaterial {
-  id         String          @id @default(cuid())
-  quantity   Float           // Cantidad que consume de este material
-  
-  template   ProductTemplate @relation(fields: [templateId], references: [id])
-  templateId String
-  material   Material        @relation(fields: [materialId], references: [id])
-  materialId String
-}
-
-// --- PEDIDOS ---
-
-model Order {
-  id             String      @id @default(cuid())
-  orderNumber    Int         @unique @default(autoincrement())
-  customerName   String
-  customerPhone  String?     // Nuevo: Teléfono
-  status         OrderStatus @default(PRESUPUESTADO)
-  createdAt      DateTime    @default(now())
-  deliveryDate   DateTime?
-  totalCost      Float       @default(0)
-  totalPrice     Float       @default(0)
-  designDetails  String?     // Nuevo: Qué se graba/imprime
-  images         OrderImage[] 
-  notes          String?
-  userId         String
-  user           User        @relation(fields: [userId], references: [id])
-  items          OrderItem[]
-  payments       Payment[]   
-}
-
-model OrderImage {
-  id      String @id @default(cuid())
-  url     String
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId String
-}
-
-// Items específicos dentro de un pedido
-model OrderItem {
-  id           String          @id @default(cuid())
-  quantity     Int
-  customPrice  Float           // Precio final pactado por unidad
-  
-  order        Order           @relation(fields: [orderId], references: [id])
-  orderId      String
-  template     ProductTemplate @relation(fields: [templateId], references: [id])
-  templateId   String
-}
-
-// Registro de pagos (Señas / Pagos totales)
-model Payment {
+model Notification {
   id        String   @id @default(cuid())
-  amount    Float
-  date      DateTime @default(now())
-  method    String   // Efectivo, Transferencia, etc.
+  title     String
+  message   String
+  type      String   
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
   
-  order     Order    @relation(fields: [orderId], references: [id])
-  orderId   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }
 
-enum OrderStatus {
-  PRESUPUESTADO
-  CONFIRMADO
-  EN_PROCESO
-  LISTO
-  ENTREGADO
-  CANCELADO
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
