@@ -6,6 +6,21 @@ import {
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase-server"
+import { Metadata } from "next"
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+    const { slug } = await params
+    const user = await prisma.user.findUnique({ where: { slug } })
+
+    return {
+        title: user?.name || "Tienda Online",
+        description: `Catálogo exclusivo de ${user?.name}`,
+        icons: {
+            icon: user?.logoUrl || "/favicon.ico",
+            apple: user?.logoUrl || "/icon-192x192.png",
+        }
+    }
+}
 
 export default async function PublicStorePage({ 
     params, 
