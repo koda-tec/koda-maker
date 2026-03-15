@@ -56,3 +56,43 @@ export async function updateTemplatePricing(id: string, basePrice: number, targe
   revalidatePath(`/dashboard/templates/${id}`)
   revalidatePath("/dashboard/templates")
 }
+
+/**
+ * ACTUALIZAR CONFIGURACIÓN DE TIENDA (E-COMMERCE)
+ */
+export async function updatePublicSettings(templateId: string, formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const isPublic = formData.get("isPublic") === "true"
+    const publicDescription = formData.get("publicDescription") as string
+    const file = formData.get("publicImage") as File
+    let publicImage = undefined
+
+    // Procesar imagen vendedora si se subió una
+    if (file && file.size > 0) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${user.id}/${templateId}-${Date.now()}.${fileExt}`
+        
+        const arrayBuffer = await file.arrayBuffer()
+        const { data } = await supabase.storage
+            .from('productos')
+            .upload(fileName, Buffer.from(arrayBuffer), { contentType: file.type, upsert: true })
+        
+        if (data) {
+            publicImage = supabase.storage.from('productos').getPublicUrl(fileName).data.publicUrl
+        }
+    }
+
+    await prisma.productTemplate.update({
+        where: { id: templateId, userId: user.id },
+        data: {
+            isPublic,
+            publicDescription,
+            ...(publicImage && { publicImage })
+        }
+    })
+
+    revalidatePath(`/dashboard/templates/${templateId}`)
+}
