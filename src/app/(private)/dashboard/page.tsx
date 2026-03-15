@@ -26,22 +26,14 @@ export default async function DashboardPage() {
   // 1. Verificación de Sesión
   if (!authUser) redirect("/login")
 
-  // 2. Traer perfil de usuario primero (Para validar que existe en Prisma)
+  // 2. Traer perfil de usuario primero
   const dbUser = await prisma.user.findUnique({
     where: { id: authUser.id }
   })
 
-  if (!dbUser) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-10 text-center">
-        <AlertCircle size={48} className="text-accent mb-4" />
-        <h2 className="text-xl font-black uppercase tracking-tighter text-black">Usuario no sincronizado</h2>
-        <p className="text-zinc-500 text-sm mt-2">Por favor, registrate de nuevo o contactá a soporte.</p>
-      </div>
-    )
-  }
+  if (!dbUser) return null
 
-  // 3. Carga de datos de negocio en paralelo (Optimizado)
+  // 3. Carga de datos de negocio en paralelo
   const [orders, materials, notifications] = await Promise.all([
     prisma.order.findMany({
       where: { userId: authUser.id },
@@ -57,17 +49,19 @@ export default async function DashboardPage() {
     })
   ])
 
-  // --- LÓGICA DE NEGOCIO ---
+  // --- LÓGICA DE TIEMPO ---
   const now = new Date()
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Ponemos hoy a las 00:00 para comparar solo fechas
+  
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthsNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
 
-  // Ganancia Neta del Mes Actual (Confirmados/Entregados)
+  // --- CÁLCULOS DE NEGOCIO ---
   const monthProfit = orders
     .filter(o => o.status !== 'PRESUPUESTADO' && o.status !== 'CANCELADO' && new Date(o.createdAt) >= startOfMonth)
     .reduce((acc, o) => acc + (o.totalPrice - o.totalCost), 0)
 
-  // Cuentas por Cobrar (Saldos pendientes totales)
   const pendingCollection = orders
     .filter(o => o.status !== 'ENTREGADO' && o.status !== 'PRESUPUESTADO')
     .reduce((acc, o) => {
@@ -75,10 +69,9 @@ export default async function DashboardPage() {
       return acc + (o.totalPrice - paid)
     }, 0)
 
-  // Alertas de Stock
   const stockAlertsCount = materials.filter(m => m.type !== 'Máquina' && m.stock <= m.minStock).length
 
-  // Próximas Entregas (Top 3)
+  // Próximas Entregas (Ordenadas y detectando atrasos)
   const upcomingOrders = orders
     .filter(o => o.status === 'CONFIRMADO' || o.status === 'EN_PROCESO')
     .sort((a, b) => {
@@ -86,9 +79,9 @@ export default async function DashboardPage() {
         const dateB = b.deliveryDate ? new Date(b.deliveryDate).getTime() : Infinity
         return dateA - dateB
     })
-    .slice(0, 3)
+    .slice(0, 4)
 
-  // --- BANNERS DE ALERTA DINÁMICA ---
+  // --- BANNERS DE ALERTA ---
   const alerts = []
   if (stockAlertsCount > 0) {
     alerts.push({
@@ -104,38 +97,32 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-12 pb-32 pt-8 px-4 max-w-6xl mx-auto">
       
+      {/* HEADER PRINCIPAL */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex items-center gap-5">
+            <img src="/icon-192x192.png" alt="Koda" className="w-16 h-16 rounded-3xl shadow-2xl rotate-3 border-2 border-white shrink-0 bg-black" />
+            <div>
+                <p className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic">Koda Maker System</p>
+                <h2 className="text-3xl md:text-4xl font-black text-black tracking-tighter uppercase leading-none">
+                    Panel de {dbUser.name || "Tu Negocio"}
+                </h2>
+            </div>
+        </div>
 
-<header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4">
-  <div className="flex items-center gap-5">
-      <img 
-        src="/icon-192x192.png" 
-        alt="Koda Maker" 
-        className="w-16 h-16 rounded-3xl shadow-2xl rotate-3 border-2 border-white shrink-0 object-contain bg-black" 
-      />
-      <div>
-          <p className="text-[10px] font-black uppercase text-accent tracking-[0.4em] mb-1 italic">
-              Koda Maker System
-          </p>
-          <h2 className="text-3xl md:text-4xl font-black text-black tracking-tighter uppercase leading-none">
-              Panel de {dbUser?.name || "Tu Negocio"}
-          </h2>
-      </div>
-  </div>
+        <div className="flex items-center gap-3">
+            <NotificationCenter notifications={notifications} />
+            <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-zinc-100 shadow-sm text-zinc-500">
+                <CalendarDays size={18} className="text-accent" />
+                <span suppressHydrationWarning className="text-[10px] font-black uppercase tracking-widest">
+                    {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+                </span>
+            </div>
+        </div>
+      </header>
 
-  <div className="flex items-center gap-3">
-      {/* CAMPANITA DE NOTIFICACIONES */}
-      <NotificationCenter notifications={notifications} />
+      {/* BOTÓN PERMISOS PUSH (Si no están activos) */}
+      <EnableNotifications />
 
-      {/* FECHA ACTUAL */}
-      <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-zinc-100 shadow-sm text-zinc-500">
-          <CalendarDays size={18} className="text-accent" />
-          <span suppressHydrationWarning className="text-[10px] font-black uppercase tracking-widest">
-              {now.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
-          </span>
-      </div>
-  </div>
-</header>
- <EnableNotifications />
       {/* RENDER DE BANNERS DE ALERTA */}
       {alerts.length > 0 && (
         <section className="space-y-3">
@@ -181,12 +168,13 @@ export default async function DashboardPage() {
                     </h4>
                 </div>
             </div>
-            <p className="text-[9px] font-black text-zinc-300 uppercase mt-8 italic tracking-widest text-right w-full">Total histórico</p>
+            <p className="text-[9px] font-black text-zinc-300 uppercase mt-8 italic tracking-widest text-right w-full">Total de deudas</p>
         </div>
       </section>
 
-      {/* ENTREGAS Y ACCESOS */}
+      {/* ENTREGAS Y ACCIONES */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          
           <section className="lg:col-span-7 space-y-6">
             <div className="flex justify-between items-center px-2">
                 <h3 className="font-black text-[10px] uppercase tracking-[0.3em] text-zinc-400">Próximas Entregas</h3>
@@ -194,23 +182,44 @@ export default async function DashboardPage() {
             </div>
             
             <div className="space-y-4">
-                {upcomingOrders.length > 0 ? upcomingOrders.map((order) => (
-                    <Link key={order.id} href={`/dashboard/pedidos?search=${order.customerName}`} className="bg-white p-6 rounded-[35px] border border-zinc-50 shadow-sm flex justify-between items-center hover:shadow-xl transition-all group">
-                        <div className="flex items-center gap-5">
-                            <Clock size={24} className="text-zinc-300 group-hover:text-black transition-colors shadow-inner" />
-                            <div>
-                                <h4 className="font-black text-lg uppercase tracking-tighter mb-1 leading-none text-black">{order.customerName}</h4>
-                                <p suppressHydrationWarning className="text-[10px] font-bold text-zinc-400 uppercase italic tracking-widest">
-                                    Entrega: {order.deliveryDate?.toLocaleDateString('es-AR', {day: '2-digit', month: 'long'})}
-                                </p>
+                {upcomingOrders.length > 0 ? upcomingOrders.map((order) => {
+                    // Lógica para detectar si está ATRASADO
+                    const isOverdue = order.deliveryDate && new Date(order.deliveryDate) < today;
+
+                    return (
+                        <Link 
+                            key={order.id} 
+                            href={`/dashboard/pedidos?search=${order.customerName}`} 
+                            className={`p-6 rounded-[35px] border-2 flex justify-between items-center transition-all group ${
+                                isOverdue 
+                                ? 'bg-red-50 border-red-200 animate-in fade-in duration-1000' 
+                                : 'bg-white border-zinc-50 shadow-sm'
+                            }`}
+                        >
+                            <div className="flex items-center gap-5">
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner transition-colors ${isOverdue ? 'bg-accent text-white' : 'bg-zinc-50 text-zinc-300 group-hover:text-black'}`}>
+                                    {isOverdue ? <AlertCircle size={24} /> : <Clock size={24} />}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className={`font-black text-lg uppercase tracking-tighter leading-none ${isOverdue ? 'text-black' : 'text-black'}`}>{order.customerName}</h4>
+                                        {isOverdue && (
+                                            <span className="bg-accent text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Atrasado</span>
+                                        )}
+                                    </div>
+                                    <p suppressHydrationWarning className={`text-[10px] font-bold uppercase mt-1 tracking-widest ${isOverdue ? 'text-accent' : 'text-zinc-400'}`}>
+                                        {isOverdue ? 'Expiró el: ' : 'Entrega: '}
+                                        {order.deliveryDate?.toLocaleDateString('es-AR', {day: '2-digit', month: 'long'})}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                        <ArrowRight size={20} className="text-zinc-200 group-hover:text-black transition-all" />
-                    </Link>
-                )) : (
+                            <ArrowRight size={20} className={isOverdue ? 'text-accent' : 'text-zinc-200 group-hover:text-black transition-all'} />
+                        </Link>
+                    )
+                }) : (
                     <div className="bg-zinc-50/50 p-16 rounded-[50px] border-2 border-dashed border-zinc-100 text-center space-y-3">
                         <CheckCircle2 className="mx-auto text-zinc-200" size={40} />
-                        <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest italic">Sin entregas próximas</p>
+                        <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">Sin entregas próximas</p>
                     </div>
                 )}
             </div>
@@ -218,12 +227,11 @@ export default async function DashboardPage() {
 
           <section className="lg:col-span-5 grid grid-cols-2 gap-4">
                 <Link href="/dashboard/pedidos" className="bg-black p-10 rounded-[45px] text-white flex flex-col items-center justify-center gap-4 shadow-xl active:scale-95 group">
-                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                    <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
                         <Plus size={28} strokeWidth={3} />
                     </div>
                     <span className="text-[9px] font-black uppercase tracking-widest text-center">Nuevo Pedido</span>
                 </Link>
-                
                 <Link href="/dashboard/inversion" className="bg-white p-10 rounded-[45px] text-black flex flex-col items-center justify-center gap-4 hover:bg-zinc-50 transition-all shadow-md border border-zinc-100 active:scale-95">
                     <div className="w-12 h-12 bg-zinc-50 rounded-2xl flex items-center justify-center">
                         <Landmark size={24} />

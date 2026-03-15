@@ -128,3 +128,33 @@ export async function registerPurchase(formData: FormData) {
     revalidatePath("/dashboard/pedidos")
     revalidatePath("/dashboard/reportes")
 }
+
+export async function adjustStock(formData: FormData) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const materialId = formData.get("materialId") as string
+    const quantity = parseFloat(formData.get("quantity") as string)
+    const reason = formData.get("reason") as string
+
+    await prisma.$transaction(async (tx) => {
+        // 1. Restamos el stock
+        const material = await tx.material.update({
+            where: { id: materialId },
+            data: { stock: { decrement: quantity } }
+        })
+
+        // 2. Creamos una notificación interna de que se consumió material
+        await tx.notification.create({
+            data: {
+                title: "Consumo Interno",
+                message: `Se descontaron ${quantity} ${material.unit} de ${material.name} por: ${reason}`,
+                type: 'STOCK',
+                userId: user.id
+            }
+        })
+    })
+
+    revalidatePath("/dashboard/stock")
+}
