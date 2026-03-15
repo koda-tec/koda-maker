@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase-server"
 import { revalidatePath } from "next/cache"
 
 /**
- * 1. Añade un material de la lista de stock a la receta de esta plantilla
+ * 1. AÑADIR MATERIAL A LA RECETA
  */
 export async function addMaterialToTemplate(templateId: string, formData: FormData) {
   const materialId = formData.get("materialId") as string
@@ -23,7 +23,7 @@ export async function addMaterialToTemplate(templateId: string, formData: FormDa
 }
 
 /**
- * 2. Quita un material de la receta
+ * 2. QUITAR MATERIAL DE LA RECETA
  */
 export async function removeMaterialFromTemplate(id: string, templateId: string) {
   await prisma.templateMaterial.delete({
@@ -33,32 +33,24 @@ export async function removeMaterialFromTemplate(id: string, templateId: string)
 }
 
 /**
- * 3. Actualiza el precio de venta final y el margen de ganancia deseado
+ * 3. ACTUALIZAR PRECIOS Y MARGEN
  */
 export async function updateTemplatePricing(id: string, basePrice: number, targetMargin: number) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) throw new Error("No autorizado")
 
   await prisma.productTemplate.update({
-    where: { 
-        id,
-        userId: user.id 
-    },
-    data: {
-      basePrice,
-      targetMargin,
-    }
+    where: { id, userId: user.id },
+    data: { basePrice, targetMargin }
   })
 
-  // Refrescamos ambas páginas para que los cambios se vean en todos lados
   revalidatePath(`/dashboard/templates/${id}`)
   revalidatePath("/dashboard/templates")
 }
 
 /**
- * ACTUALIZAR CONFIGURACIÓN DE TIENDA (E-COMMERCE)
+ * 4. ACTUALIZAR CONFIGURACIÓN DE TIENDA (SOPORTE MULTI-IMAGEN)
  */
 export async function updatePublicSettings(templateId: string, formData: FormData) {
     const supabase = await createClient()
@@ -67,32 +59,68 @@ export async function updatePublicSettings(templateId: string, formData: FormDat
 
     const isPublic = formData.get("isPublic") === "true"
     const publicDescription = formData.get("publicDescription") as string
-    const file = formData.get("publicImage") as File
-    let publicImage = undefined
+    const files = formData.getAll("publicImages") as File[]
+    const uploadedUrls: string[] = []
 
-    // Procesar imagen vendedora si se subió una
-    if (file && file.size > 0) {
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${user.id}/${templateId}-${Date.now()}.${fileExt}`
-        
-        const arrayBuffer = await file.arrayBuffer()
-        const { data } = await supabase.storage
-            .from('productos')
-            .upload(fileName, Buffer.from(arrayBuffer), { contentType: file.type, upsert: true })
-        
-        if (data) {
-            publicImage = supabase.storage.from('productos').getPublicUrl(fileName).data.publicUrl
+    // Subida de múltiples imágenes
+    for (const file of files) {
+        if (file && file.size > 0) {
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${user.id}/catalog/${templateId}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+            
+            const arrayBuffer = await file.arrayBuffer()
+            const { data } = await supabase.storage
+                .from('productos')
+                .upload(fileName, Buffer.from(arrayBuffer), { 
+                    contentType: file.type,
+                    upsert: true 
+                })
+            
+            if (data) {
+                const { data: urlData } = supabase.storage.from('productos').getPublicUrl(fileName)
+                uploadedUrls.push(urlData.publicUrl)
+            }
         }
     }
 
+    // Actualizamos datos y creamos las nuevas relaciones de imágenes
     await prisma.productTemplate.update({
         where: { id: templateId, userId: user.id },
         data: {
             isPublic,
             publicDescription,
-            ...(publicImage && { publicImage })
+            images: {
+                create: uploadedUrls.map(url => ({ url }))
+            }
         }
     })
 
     revalidatePath(`/dashboard/templates/${templateId}`)
+}
+
+/**
+ * 5. BORRAR IMAGEN INDIVIDUAL DEL CATÁLOGO
+ */
+export async function deleteTemplateImage(imageId: string, imageUrl: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    // Extraer el path para borrar del storage
+    // Ejemplo de URL: .../storage/v1/object/public/productos/user_id/catalog/file.png
+    const pathParts = imageUrl.split('/productos/')
+    const path = pathParts[1]
+    
+    if (path) {
+        await supabase.storage.from('productos').remove([path])
+    }
+
+    // Borramos de la base de datos
+    await prisma.templateImage.delete({
+        where: { id: imageId }
+    })
+
+    // No necesitamos el ID de la plantilla porque ya estamos en la ruta
+    // Pero forzamos revalidate para que desaparezca de la UI
+    revalidatePath(`/dashboard/templates`, 'layout')
 }

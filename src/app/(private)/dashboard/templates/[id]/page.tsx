@@ -9,6 +9,7 @@ import {
 import Link from "next/link"
 import { addMaterialToTemplate, removeMaterialFromTemplate, updateTemplatePricing, updatePublicSettings } from "./actions"
 import { SubmitButton } from "@/components/SubmitButton"
+import { deleteTemplateImage } from "./actions"
 
 export default async function RecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -17,7 +18,9 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
 
   const template = await prisma.productTemplate.findUnique({
     where: { id, userId: user?.id },
-    include: { materials: { include: { material: true } } }
+    include: { materials: { include: { material: true } },
+    images: true
+   }
   })
 
   const allMaterials = await prisma.material.findMany({
@@ -124,8 +127,8 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         )}
       </section>
 
-      {/* 2. CONFIGURACIÓN DE TIENDA ONLINE */}
-      <section className="bg-white p-8 md:p-12 rounded-[50px] shadow-sm border border-zinc-100 relative overflow-hidden">
+{/* 2. CONFIGURACIÓN DE TIENDA ONLINE (SOPORTE MULTI-IMAGEN) */}
+      <section className="bg-white p-8 md:p-12 rounded-[50px] shadow-xl border-2 border-zinc-50 relative overflow-hidden">
         <div className="flex items-center gap-3 mb-10">
             <div className={`w-3 h-3 rounded-full ${template.isPublic ? 'bg-green-500 animate-pulse' : 'bg-zinc-300'}`} />
             <h3 className="font-black uppercase text-sm tracking-widest text-black flex items-center gap-2 italic">
@@ -136,51 +139,79 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
         <form action={async (formData) => {
             "use server"
             await updatePublicSettings(id, formData)
-        }} encType="multipart/form-data" className="grid grid-cols-1 md:grid-cols-12 gap-12">
+        }} encType="multipart/form-data" className="space-y-12">
             
-            {/* Foto de producto */}
-            <div className="md:col-span-4 space-y-4 text-center md:text-left">
-                <p className="text-[10px] font-black uppercase text-zinc-400 ml-4 tracking-widest italic">Imagen para clientes</p>
-                <div className="relative aspect-square rounded-[40px] bg-zinc-50 border-4 border-white shadow-2xl overflow-hidden flex items-center justify-center group mx-auto md:mx-0">
-                    {template.publicImage ? (
-                        <img src={template.publicImage} className="w-full h-full object-cover" alt="Portada" />
-                    ) : (
-                        <ImageIcon size={48} className="text-zinc-200" />
-                    )}
-                    <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-sm">
-                        <div className="flex flex-col items-center text-white gap-2">
-                            <Plus size={32} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Cambiar Foto</span>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+                {/* Selector de archivos (Zona de carga) */}
+                <div className="md:col-span-4 space-y-4 text-center md:text-left">
+                    <p className="text-[10px] font-black uppercase text-zinc-400 ml-4 tracking-widest italic">Subir Fotos al Catálogo</p>
+                    <label className="relative aspect-square rounded-[40px] bg-zinc-50 border-4 border-dashed border-zinc-200 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-100 hover:border-accent/40 transition-all group shadow-inner">
+                        <div className="flex flex-col items-center gap-2 group-hover:scale-110 transition-transform">
+                            <Plus size={40} className="text-zinc-300 group-hover:text-accent" />
+                            <span className="text-[10px] font-black uppercase text-zinc-400">Elegir Archivos</span>
                         </div>
-                        <input name="publicImage" type="file" accept="image/*" className="hidden" />
+                        <input name="publicImages" type="file" accept="image/*" multiple className="hidden" />
                     </label>
+                    <p className="text-[9px] text-zinc-400 font-bold text-center uppercase">Podés seleccionar varias fotos a la vez</p>
+                </div>
+
+                {/* Datos de visibilidad y descripción */}
+                <div className="md:col-span-8 space-y-8 flex flex-col justify-between">
+                    <div className="space-y-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-4 p-5 bg-zinc-50 rounded-[35px] border border-zinc-100 shadow-inner">
+                            <div className="flex items-center gap-3 flex-1">
+                                <CheckCircle2 size={20} className={template.isPublic ? "text-green-500" : "text-zinc-300"} />
+                                <p className="text-[11px] font-black uppercase tracking-tighter">¿Publicar este producto en mi web?</p>
+                            </div>
+                            <select name="isPublic" defaultValue={template.isPublic ? "true" : "false"} className="w-full sm:w-auto bg-white p-3 px-6 rounded-2xl font-black text-xs border-none outline-none shadow-sm cursor-pointer hover:bg-zinc-50 transition-all">
+                                <option value="false">🔴 NO, MANTENER OCULTO</option>
+                                <option value="true">🟢 SÍ, HACER PÚBLICO</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-6 tracking-[0.2em]">Descripción de Venta (Lo que lee el cliente)</label>
+                            <textarea 
+                                name="publicDescription" 
+                                defaultValue={template.publicDescription || ""} 
+                                placeholder="Contale a tus clientes lo especial que es este producto..."
+                                className="w-full p-8 bg-zinc-50 border-none rounded-[40px] outline-none text-sm font-medium h-40 focus:ring-2 focus:ring-accent resize-none shadow-inner"
+                            />
+                        </div>
+                    </div>
+                    <SubmitButton label="Actualizar Catálogo Público" />
                 </div>
             </div>
 
-            {/* Datos públicos */}
-            <div className="md:col-span-8 space-y-8 flex flex-col justify-between">
-                <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row items-center gap-4 p-5 bg-zinc-50 rounded-[35px] border border-zinc-100">
-                        <div className="flex items-center gap-3 flex-1">
-                            <CheckCircle2 size={20} className={template.isPublic ? "text-green-500" : "text-zinc-300"} />
-                            <p className="text-[11px] font-black uppercase tracking-tighter">¿Publicar este producto en mi web?</p>
-                        </div>
-                        <select name="isPublic" defaultValue={template.isPublic ? "true" : "false"} className="w-full sm:w-auto bg-white p-3 px-6 rounded-2xl font-black text-xs border-none outline-none shadow-sm cursor-pointer hover:bg-zinc-50 transition-all">
-                            <option value="false">🔴 NO, MANTENER OCULTO</option>
-                            <option value="true">🟢 SÍ, HACER PÚBLICO</option>
-                        </select>
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-zinc-400 ml-6 tracking-[0.2em]">Descripción de Venta</label>
-                        <textarea 
-                            name="publicDescription" 
-                            defaultValue={template.publicDescription || ""} 
-                            placeholder="Contale a tus clientes lo especial que es este producto..."
-                            className="w-full p-8 bg-zinc-50 border-none rounded-[40px] outline-none text-sm font-medium h-40 focus:ring-2 focus:ring-accent resize-none shadow-inner"
-                        />
-                    </div>
+            {/* Galería de imágenes actuales con opción de borrado */}
+            <div className="border-t border-zinc-100 pt-10">
+                <div className="flex items-center gap-2 mb-6 ml-4">
+                    <ImageIcon size={14} className="text-accent" />
+                    <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest italic">Imágenes actuales en la tienda (Click para eliminar)</p>
                 </div>
-                <SubmitButton label="Guardar Cambios de Tienda" />
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                    {template.images && template.images.map((img) => (
+                        <div key={img.id} className="relative aspect-square rounded-[30px] overflow-hidden group border-2 border-zinc-100 shadow-sm hover:shadow-md transition-all">
+                            <img src={img.url} className="w-full h-full object-cover" alt="Producto de catálogo" />
+                            <button 
+                                type="button" 
+                                onClick={async () => {
+                                    "use server"
+                                    await deleteTemplateImage(img.id, img.url)
+                                }}
+                                className="absolute inset-0 bg-accent/90 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                                title="Eliminar de la web"
+                            >
+                                <Trash2 size={24} />
+                            </button>
+                        </div>
+                    ))}
+                    {(!template.images || template.images.length === 0) && (
+                        <div className="col-span-full py-12 text-center bg-zinc-50 rounded-[40px] border-2 border-dashed border-zinc-100">
+                            <p className="text-zinc-300 font-black uppercase text-[10px] tracking-widest">No hay fotos en la galería pública</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </form>
       </section>

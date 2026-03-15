@@ -93,6 +93,7 @@ model ProductTemplate {
   isPublic          Boolean @default(false)
   publicDescription String? @db.Text
   publicImage       String? // Imagen de portada para la tienda
+  images         TemplateImage[] 
 
   userId         String
   user           User     @relation(fields: [userId], references: [id])
@@ -100,6 +101,14 @@ model ProductTemplate {
   materials      TemplateMaterial[]
   orderItems     OrderItem[]
 }
+
+model TemplateImage {
+  id         String          @id @default(cuid())
+  url        String
+  template   ProductTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  templateId String
+}
+
 
 model TemplateMaterial {
   id         String          @id @default(cuid())
