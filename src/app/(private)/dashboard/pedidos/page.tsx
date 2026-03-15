@@ -213,10 +213,22 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 <div className="space-y-8">
                     <div className="flex items-center gap-5">
                         <div className="w-16 h-16 bg-zinc-50 rounded-[25px] flex items-center justify-center text-black border border-zinc-100 shadow-inner"><User size={30} /></div>
-                        <div>
-                            <h4 className="text-3xl font-black uppercase tracking-tighter leading-none text-black">{order.customerName}</h4>
-                            <p className="text-[10px] font-bold text-accent uppercase mt-2 tracking-widest">{order.customerPhone || "Sin contacto"}</p>
+                     {/* IDENTIFICADOR DE ORIGEN EN PEDIDOS */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h4 className="text-3xl font-black uppercase tracking-tighter leading-none text-black">
+                                {order.customerName}
+                            </h4>
+                            {order.isFromStore && (
+                                <span className="bg-accent text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.2em] shadow-sm animate-pulse">
+                                    🛒 Web Store
+                                </span>
+                            )}
                         </div>
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase mt-1 tracking-widest italic">
+                            {order.customerPhone || "Sin contacto"}
+                        </p>
+                    </div>
                     </div>
 
                     <div className="bg-black text-white p-6 rounded-[35px] flex items-center justify-between shadow-xl">
