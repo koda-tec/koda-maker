@@ -27,3 +27,31 @@ export async function updateShippingInfo(formData: FormData) {
 
     revalidatePath("/dashboard/logistica")
 }
+
+export async function dispatchOrder(orderId: string) {
+    const order = await prisma.order.update({
+        where: { id: orderId },
+        data: { status: 'ENTREGADO' }
+    })
+
+    await sendGlobalNotification(
+        order.userId,
+        "📦 Pedido Despachado",
+        `El pedido #${order.orderNumber} de ${order.customerName} fue marcado como entregado/enviado.`,
+        "DELIVERY"
+    )
+
+    revalidatePath("/dashboard/logistica")
+    revalidatePath("/dashboard/pedidos")
+}
+
+export async function updateShippingPrice(orderId: string, cost: number) {
+    await prisma.order.update({
+        where: { id: orderId },
+        data: { 
+            shippingCost: cost,
+            totalPrice: { increment: cost } 
+        }
+    })
+    revalidatePath("/dashboard/logistica")
+}
