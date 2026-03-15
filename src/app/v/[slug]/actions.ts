@@ -53,14 +53,14 @@ export async function submitOrderRequest(formData: FormData, userId: string, tem
             customerName,
             customerPhone,
             designDetails,
-            // Quitamos 'quantity' de aquí porque no existe en el modelo Order
             totalPrice,
             totalCost,
             deliveryMethod,
             shippingAddress,
             isFromStore: true,
-            status: 'PRESUPUESTADO', // Entra como presupuesto para que el dueño lo apruebe
+            status: 'PRESUPUESTADO', 
             userId,
+            deliveryDate: null, 
             items: {
                 create: {
                     templateId,

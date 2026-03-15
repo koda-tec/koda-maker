@@ -1,6 +1,6 @@
 "use client"
 import { useState } from "react"
-import { ArrowLeft, Upload, Truck, MapPin, Globe, Loader2, Send, Calendar } from "lucide-react"
+import { ArrowLeft, Upload, Truck, MapPin, Globe, Loader2, Send, Calendar, Info } from "lucide-react"
 import { submitOrderRequest } from "../actions"
 
 export function ClientCustomizer({ storeUser, template, slug }: { storeUser: any, template: any, slug: string }) {
@@ -85,36 +85,35 @@ export function ClientCustomizer({ storeUser, template, slug }: { storeUser: any
                         </div>
                     </div>
 
-                    {/* PASO 2: EL PEDIDO */}
+  {/* PASO 2: EL PEDIDO */}
                     <div className="space-y-6">
                         <h3 className="font-black uppercase text-xs tracking-widest text-accent italic">2. Detalles del Pedido</h3>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Input numérico de cantidad */}
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* Input numérico de cantidad - Ahora más grande */}
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-zinc-400 ml-2 tracking-widest italic">¿Cuántas unidades?</label>
+                                <label className="text-[10px] font-black uppercase text-zinc-400 ml-2 tracking-widest italic">¿Cuántas unidades necesitás?</label>
                                 <input 
                                     name="quantity" 
                                     type="number" 
                                     min="1" 
                                     value={quantity} 
                                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                    className="w-full p-5 bg-zinc-50 rounded-[25px] font-black text-2xl outline-none focus:ring-2 focus:ring-accent transition-all text-black" 
+                                    className="w-full p-5 bg-zinc-50 rounded-[25px] font-black text-3xl outline-none focus:ring-2 focus:ring-accent transition-all text-black shadow-inner" 
                                     required 
                                 />
                             </div>
 
-                            {/* Fecha de entrega deseada */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-zinc-400 ml-2 tracking-widest italic">¿Para cuándo lo necesitás?</label>
-                                <div className="relative">
-                                    <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-300 pointer-events-none" size={18} />
-                                    <input 
-                                        name="deliveryDate" 
-                                        type="date" 
-                                        required 
-                                        className="w-full p-5 pl-14 bg-zinc-50 rounded-[25px] font-black text-sm outline-none focus:ring-2 focus:ring-accent text-black" 
-                                    />
+                            {/* MENSAJE DE COORDINACIÓN DE ENTREGA */}
+                            <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 p-6 rounded-[35px] flex items-start gap-4">
+                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-accent shadow-sm shrink-0">
+                                    <Clock size={20} />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="font-black uppercase text-[10px] tracking-widest text-black">Fecha de Entrega</h4>
+                                    <p className="text-xs font-bold text-zinc-500 leading-snug">
+                                        La fecha final de entrega se coordinará por WhatsApp una vez que confirmemos la complejidad de tu diseño.
+                                    </p>
                                 </div>
                             </div>
                         </div>
