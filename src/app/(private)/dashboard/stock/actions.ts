@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 import { createClient } from "@/lib/supabase-server"
 import { revalidatePath } from "next/cache"
 import { toast } from "sonner" 
-
+import { sendGlobalNotification } from "../actions-notifications"
 export async function addMaterial(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -128,7 +128,6 @@ export async function registerPurchase(formData: FormData) {
     revalidatePath("/dashboard/pedidos")
     revalidatePath("/dashboard/reportes")
 }
-
 export async function adjustStock(formData: FormData) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -138,23 +137,40 @@ export async function adjustStock(formData: FormData) {
     const quantity = parseFloat(formData.get("quantity") as string)
     const reason = formData.get("reason") as string
 
-    await prisma.$transaction(async (tx) => {
-        // 1. Restamos el stock
-        const material = await tx.material.update({
-            where: { id: materialId },
-            data: { stock: { decrement: quantity } }
+    if (isNaN(quantity) || quantity <= 0) return
+
+    try {
+        const updatedMaterial = await prisma.$transaction(async (tx) => {
+            // 1. Restamos el stock
+            const mat = await tx.material.update({
+                where: { id: materialId },
+                data: { stock: { decrement: quantity } }
+            })
+
+            // 2. Creamos la notificación interna
+            await tx.notification.create({
+                data: {
+                    title: "Consumo Interno",
+                    message: `${quantity} ${mat.unit} de ${mat.name} usados para: ${reason}`,
+                    type: 'STOCK',
+                    userId: user.id
+                }
+            })
+            return mat
         })
 
-        // 2. Creamos una notificación interna de que se consumió material
-        await tx.notification.create({
-            data: {
-                title: "Consumo Interno",
-                message: `Se descontaron ${quantity} ${material.unit} de ${material.name} por: ${reason}`,
-                type: 'STOCK',
-                userId: user.id
-            }
-        })
-    })
+        // 3. Notificación Push al celular (Opcional, para control)
+        await sendGlobalNotification(
+            user.id, 
+            "🛠️ Ajuste de Stock", 
+            `Consumo interno: ${quantity} un. de ${updatedMaterial.name}`, 
+            'STOCK'
+        )
+
+    } catch (error) {
+        console.error("Error al ajustar stock:", error)
+    }
 
     revalidatePath("/dashboard/stock")
+    revalidatePath("/dashboard")
 }

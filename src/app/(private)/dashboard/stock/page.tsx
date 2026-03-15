@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server"
 import { Plus, AlertTriangle, Package, Trash2, Pencil } from "lucide-react"
 import { addMaterial, deleteMaterial } from "./actions"
 export const revalidate = 1; 
+import { AdjustStockModal } from "@/components/AdjustStockModal";
 
 export default async function StockPage() {
   const supabase = await createClient()
@@ -25,11 +26,11 @@ export default async function StockPage() {
       {/* Formulario rápido (Simple para celular) */}
       <section className="bg-white p-6 rounded-32px shadow-sm border border-gray-100">
         <h3 className="font-bold mb-4 flex items-center gap-2">
-            <Plus size={18} className="text-[#f13d4b]" /> 
+            <Plus size={18} className="text-accent" /> 
             Cargar Material
         </h3>
         <form action={addMaterial} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input name="name" placeholder="Nombre (Ej: MDF 3mm)" className="p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-[#f13d4b]" required />
+          <input name="name" placeholder="Nombre (Ej: MDF 3mm)" className="p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-accent" required />
           
           <select name="type" className="p-4 bg-gray-50 rounded-2xl outline-none" required>
             <option value="Láser">Corte/Grabado Láser</option>
@@ -73,6 +74,15 @@ export default async function StockPage() {
                     <button className="p-2 text-gray-300 hover:text-red-500 transition-colors">
                         <Trash2 size={18} />
                     </button>
+                    <div className="flex items-center gap-2">
+                        <AdjustStockModal material={m} />
+                        
+                        <form action={async () => { "use server"; await deleteMaterial(m.id) }}>
+                            <button className="p-2 text-zinc-200 hover:text-red-500 transition-colors">
+                                <Trash2 size={18} />
+                            </button>
+                        </form>
+                    </div>
                 </form>
               <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400">
                 <Package size={20} />
@@ -87,8 +97,8 @@ export default async function StockPage() {
             
             <div className="text-right">
               <div className="flex items-center gap-1 justify-end">
-                {m.stock <= m.minStock && <AlertTriangle size={14} className="text-[#f13d4b]" />}
-                <span className={`font-black text-xl ${m.stock <= m.minStock ? "text-[#f13d4b]" : "text-black"}`}>
+                {m.stock <= m.minStock && <AlertTriangle size={14} className="text-accent" />}
+                <span className={`font-black text-xl ${m.stock <= m.minStock ? "text-accent" : "text-black"}`}>
                     {m.stock}
                 </span>
               </div>
