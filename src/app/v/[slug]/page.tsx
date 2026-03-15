@@ -16,15 +16,16 @@ import Link from "next/link"
 export default async function PublicStorePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
 
-  const storeUser = await prisma.user.findUnique({
+const storeUser = await prisma.user.findUnique({
     where: { slug, isStoreActive: true },
     include: {
       templates: {
         where: { isPublic: true },
+        include: { images: true },
         orderBy: { name: 'asc' }
       }
     }
-  })
+})
 
   if (!storeUser) notFound()
 
@@ -84,17 +85,17 @@ export default async function PublicStorePage({ params }: { params: Promise<{ sl
               <div key={t.id} className="group relative flex flex-col">
                 {/* Imagen del Producto */}
                 <div className="aspect-4/5 rounded-[50px] overflow-hidden bg-zinc-100 relative shadow-sm group-hover:shadow-2xl transition-all duration-700">
-                  {t.publicImage ? (
+                {t.images && t.images.length > 0 ? (
                     <img 
-                      src={t.publicImage} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
-                      alt={t.name} 
+                    src={t.images[0].url} // Tomamos la primera imagen como portada
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
+                    alt={t.name} 
                     />
-                  ) : (
+                ) : (
                     <div className="flex items-center justify-center h-full text-zinc-200">
-                      <ShoppingBag size={80} strokeWidth={1} />
+                    <ShoppingBag size={80} strokeWidth={1} />
                     </div>
-                  )}
+                )}
                   
                   {/* Precio Flotante */}
                   <div className="absolute top-8 right-8 bg-white/90 backdrop-blur-md px-5 py-3 rounded-3xl font-black text-xl shadow-xl border border-white/20 scale-90 group-hover:scale-100 transition-transform">
