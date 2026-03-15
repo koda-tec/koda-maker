@@ -64,6 +64,17 @@ export default async function ConfigPage() {
                                 <Mail size={16} /> {user.email}
                             </div>
                         </div>
+                        
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-2 tracking-widest">WhatsApp de Ventas (Con código de país)</label>
+                            <input 
+                                name="phone" 
+                                defaultValue={user.phone || ""} 
+                                className="w-full p-5 bg-zinc-50 border-none rounded-[25px] outline-none focus:ring-2 focus:ring-accent font-black text-xl tracking-tighter"
+                                placeholder="5491122334455"
+                            />
+                        </div>
+
                     </div>
                 </div>
 

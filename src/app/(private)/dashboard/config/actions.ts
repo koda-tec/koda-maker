@@ -10,43 +10,28 @@ export async function updateSettings(formData: FormData) {
     if (!user) return
 
     const name = formData.get("name") as string
+    const phone = formData.get("phone") as string // NUEVO
     const file = formData.get("logo") as File
     let logoUrl = undefined
 
-    // Procesar Logo si se subió uno
     if (file && file.size > 0) {
         const fileExt = file.name.split('.').pop()
-        const fileName = `${user.id}/logo-${Date.now()}.${fileExt}` // Nombre único para evitar caché
-        
+        const fileName = `${user.id}/logo-${Date.now()}.${fileExt}`
         const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-
-        const { data, error } = await supabase.storage
-            .from('branding')
-            .upload(fileName, buffer, { 
-                contentType: file.type,
-                upsert: true 
-            })
-        
-        if (data) {
-            const { data: urlData } = supabase.storage.from('branding').getPublicUrl(fileName)
-            logoUrl = urlData.publicUrl
-        } else {
-            console.error("Error Supabase:", error)
-        }
+        const { data } = await supabase.storage.from('branding').upload(fileName, Buffer.from(arrayBuffer), { contentType: file.type, upsert: true })
+        if (data) logoUrl = supabase.storage.from('branding').getPublicUrl(fileName).data.publicUrl
     }
 
     await prisma.user.update({
         where: { id: user.id },
         data: { 
-            name,
+            name, 
+            phone, // NUEVO
             ...(logoUrl && { logoUrl })
         }
     })
-
     revalidatePath("/dashboard/config")
 }
-
 // CAMBIAR CONTRASEÑA
 export async function updatePassword(formData: FormData) {
     const supabase = await createClient()

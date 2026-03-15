@@ -1,26 +1,35 @@
 import prisma from "@/lib/prisma"
 import { 
-  ShoppingBag, 
-  MapPin, 
-  Truck, 
-  Globe, 
-  Star, 
-  Clock, 
-  ShieldCheck,
-  LayoutGrid,
-  ArrowRight
+  ShoppingBag, Star, LayoutGrid, ArrowRight, 
+  Search, MessageSquare, LayoutDashboard, Globe, MapPin, Truck 
 } from "lucide-react"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { createClient } from "@/lib/supabase-server"
 
-export default async function PublicStorePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PublicStorePage({ 
+    params, 
+    searchParams 
+}: { 
+    params: Promise<{ slug: string }>,
+    searchParams: Promise<{ search?: string, cat?: string }>
+}) {
   const { slug } = await params
+  const query = await searchParams
+  
+  // Verificamos si hay un dueño logueado para mostrar el botón "Volver al Dashboard"
+  const supabase = await createClient()
+  const { data: { user: authUser } } = await supabase.auth.getUser()
 
   const storeUser = await prisma.user.findUnique({
     where: { slug, isStoreActive: true },
     include: {
       templates: {
-        where: { isPublic: true },
+        where: { 
+            isPublic: true,
+            ...(query.cat ? { category: query.cat } : {}),
+            ...(query.search ? { name: { contains: query.search, mode: 'insensitive' } } : {}),
+        },
         include: { images: true },
         orderBy: { name: 'asc' }
       }
@@ -29,148 +38,86 @@ export default async function PublicStorePage({ params }: { params: Promise<{ sl
 
   if (!storeUser) notFound()
 
+  const categories = [...new Set(storeUser.templates.map(t => t.category))]
+  const isOwner = authUser?.id === storeUser.id
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-black font-sans selection:bg-accent selection:text-white">
       
-      {/* 1. NAVBAR REFINADO */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100">
+      {/* BARRA DE DUEÑO (Solo visible para el emprendedor) */}
+      {isOwner && (
+        <div className="bg-accent py-2 px-6 flex justify-between items-center sticky top-0 z-60 shadow-lg">
+            <p className="text-[9px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <LayoutDashboard size={12} /> Estás viendo tu tienda pública
+            </p>
+            <Link href="/dashboard" className="bg-white text-accent px-4 py-1 rounded-full text-[9px] font-black uppercase shadow-sm active:scale-95 transition-all">
+                Volver al Panel
+            </Link>
+        </div>
+      )}
+
+      {/* NAVBAR */}
+      <nav className={`w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100 ${isOwner ? '' : 'sticky top-0'}`}>
         <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            {storeUser.logoUrl ? (
-              <img src={storeUser.logoUrl} className="w-10 h-10 rounded-xl object-contain shadow-sm border border-zinc-100 bg-white" alt="Logo" />
-            ) : (
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white font-black">
-                {storeUser.name?.charAt(0)}
-              </div>
-            )}
-            <span className="font-black tracking-tighter uppercase text-lg md:text-xl">{storeUser.name}</span>
+            {storeUser.logoUrl && <img src={storeUser.logoUrl} className="w-10 h-10 rounded-xl object-contain shadow-sm border border-zinc-100 bg-white" alt="Logo" />}
+            <span className="font-black tracking-tighter uppercase text-xl">{storeUser.name}</span>
           </div>
-          
-          {/* Badge sutil de tienda oficial */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-zinc-50 rounded-full border border-zinc-100">
-            <ShieldCheck size={12} className="text-accent" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Tienda Verificada</span>
-          </div>
+          <a href={`https://wa.me/${storeUser.phone}`} target="_blank" className="p-3 bg-zinc-100 rounded-2xl text-accent hover:bg-accent hover:text-white transition-all">
+            <MessageSquare size={20} />
+          </a>
         </div>
       </nav>
 
-      {/* 2. HERO SECTION */}
-      <section className="pt-32 md:pt-48 pb-20 px-6 relative overflow-hidden">
-        <div className="max-w-5xl mx-auto text-center space-y-6 relative z-10">
-          <div className="inline-flex items-center gap-2 bg-zinc-100 px-4 py-2 rounded-full mb-4">
-            <Star className="w-3 h-3 text-accent fill-accent" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Diseños Únicos a Pedido</span>
-          </div>
-          <h1 className="text-5xl md:text-8xl font-black tracking-tighter uppercase leading-[0.85] text-black">
-            Tu idea hecha <br /> 
-            <span className="text-accent italic">realidad.</span>
-          </h1>
-          <p className="text-base md:text-xl text-zinc-500 max-w-2xl mx-auto font-medium leading-relaxed italic">
-            Elegí un producto, subí tu diseño y nosotros lo fabricamos con tecnología láser y 3D.
-          </p>
+      {/* BUSCADOR Y FILTROS */}
+      <section className="max-w-6xl mx-auto px-6 pt-12 space-y-8">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+            <form className="relative flex-1 w-full">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                <input name="search" placeholder="¿Qué estás buscando?" defaultValue={query.search} className="w-full pl-14 pr-6 py-5 bg-zinc-50 border-none rounded-[30px] outline-none focus:ring-2 focus:ring-accent font-bold" />
+            </form>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
+                <Link href={`/v/${slug}`} className={`px-6 py-4 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${!query.cat ? 'bg-black text-white shadow-xl' : 'bg-white text-zinc-400 border-zinc-100'}`}>Todos</Link>
+                {categories.map(cat => (
+                    <Link key={cat} href={`?cat=${cat}`} className={`px-6 py-4 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${query.cat === cat ? 'bg-black text-white shadow-xl' : 'bg-white text-zinc-400 border-zinc-100'}`}>{cat}</Link>
+                ))}
+            </div>
         </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-accent/5 blur-[120px] rounded-full z-0" />
       </section>
 
-      {/* 3. GRILLA DE PRODUCTOS (ACCESIBLE EN MOBILE) */}
-      <main className="max-w-7xl mx-auto px-6 pt-10">
-        <div className="flex items-center gap-4 mb-12">
-            <LayoutGrid size={20} className="text-accent" />
-            <h3 className="font-black uppercase text-sm tracking-[0.3em] text-zinc-400">Catálogo de Productos</h3>
-            <div className="h-px bg-zinc-100 flex-1" />
-        </div>
-
+      {/* GRILLA DE PRODUCTOS */}
+      <main className="max-w-7xl mx-auto px-6 pt-16">
         {storeUser.templates.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
             {storeUser.templates.map((t) => (
               <Link key={t.id} href={`/v/${slug}/${t.id}`} className="group flex flex-col h-full">
-                {/* Imagen del Producto */}
                 <div className="aspect-4/5 rounded-[50px] overflow-hidden bg-zinc-100 relative shadow-sm group-hover:shadow-2xl transition-all duration-700">
-                  {t.images && t.images.length > 0 ? (
-                    <img 
-                      src={t.images[0].url} 
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
-                      alt={t.name} 
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-zinc-200">
-                      <ShoppingBag size={80} strokeWidth={1} />
-                    </div>
-                  )}
-                  
-                  {/* Precio Flotante */}
-                  <div className="absolute top-6 right-6 bg-white/90 backdrop-blur-md px-5 py-3 rounded-3xl font-black text-xl shadow-xl border border-white/20">
-                    ${t.basePrice.toLocaleString('es-AR')}
-                  </div>
-
-                  {/* Botón Overlay - Visible en Hover (Desktop) y siempre presente en el flujo (Mobile) */}
-                  <div className="absolute inset-x-8 bottom-8 hidden md:block opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
-                    <div className="py-4 bg-black text-white rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] text-center shadow-2xl">
-                        Personalizar Ahora
-                    </div>
-                  </div>
+                  {t.images.length > 0 ? <img src={t.images[0].url} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" alt={t.name} /> : <div className="flex items-center justify-center h-full text-zinc-200"><ShoppingBag size={80}/></div>}
+                  <div className="absolute top-6 right-6 bg-white/90 backdrop-blur-md px-5 py-3 rounded-3xl font-black text-xl shadow-xl">${t.basePrice.toLocaleString('es-AR')}</div>
+                  <div className="absolute inset-x-8 bottom-8 hidden md:block opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500"><div className="py-4 bg-black text-white rounded-3xl font-black uppercase text-[10px] tracking-[0.2em] text-center">Personalizar Ahora</div></div>
                 </div>
-
-                {/* Info del Producto */}
-                <div className="mt-8 px-2 space-y-3 flex-1 flex flex-col">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-2xl font-black uppercase tracking-tighter text-black leading-none group-hover:text-accent transition-colors">
-                      {t.name}
-                    </h4>
-                  </div>
-                  <p className="text-zinc-500 text-sm font-medium leading-relaxed line-clamp-3 italic flex-1">
-                    {t.publicDescription || "Producto personalizado con materiales de alta calidad."}
-                  </p>
-                  
-                  {/* Botón visible solo en Mobile */}
-                  <div className="md:hidden pt-4">
-                    <div className="py-4 bg-zinc-100 text-black rounded-[20px] font-black uppercase text-[10px] tracking-[0.2em] text-center flex items-center justify-center gap-2">
-                        Personalizar <ArrowRight size={14} />
-                    </div>
-                  </div>
+                <div className="mt-8 px-2 space-y-3">
+                  <h4 className="text-2xl font-black uppercase tracking-tighter text-black leading-none">{t.name}</h4>
+                  <p className="text-zinc-500 text-sm font-medium leading-relaxed line-clamp-2 italic">{t.publicDescription}</p>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="py-32 text-center text-zinc-300 font-black uppercase tracking-widest italic">
-            Próximamente nuevos ingresos...
+          <div className="py-20 text-center space-y-8 bg-zinc-50 rounded-[60px] border-2 border-dashed border-zinc-100">
+            <div className="max-w-md mx-auto space-y-4 px-6">
+                <h3 className="text-3xl font-black uppercase tracking-tighter">No encontramos <br/> ese producto</h3>
+                <p className="text-zinc-500 font-medium text-sm">Pero no te preocupes, somos expertos en diseños personalizados. Escribinos por WhatsApp y lo creamos para vos.</p>
+                <a href={`https://wa.me/${storeUser.phone}?text=Hola! No encontré lo que buscaba en la web pero tengo una idea para un diseño personalizado...`} className="inline-flex items-center gap-3 bg-accent text-white px-10 py-5 rounded-[25px] font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-red-200 active:scale-95 transition-all">
+                    <MessageSquare size={18} /> Chat Personalizado
+                </a>
+            </div>
           </div>
         )}
       </main>
 
-      {/* 4. SECCIÓN LOGÍSTICA */}
-      <section className="max-w-4xl mx-auto mt-40 px-6 py-20 bg-white border-2 border-zinc-50 rounded-[60px] shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left">
-            <div className="space-y-4">
-                <MapPin className="mx-auto md:mx-0 text-accent" />
-                <h5 className="font-black uppercase text-xs">Retiro por Taller</h5>
-                <p className="text-zinc-400 text-xs font-bold leading-relaxed">Sin costo adicional.</p>
-            </div>
-            <div className="space-y-4">
-                <Truck className="mx-auto md:mx-0 text-accent" />
-                <h5 className="font-black uppercase text-xs">Envíos Locales</h5>
-                <p className="text-zinc-400 text-xs font-bold leading-relaxed">Consultá costos por zona.</p>
-            </div>
-            <div className="space-y-4">
-                <Globe className="mx-auto md:mx-0 text-accent" />
-                <h5 className="font-black uppercase text-xs">Todo el país</h5>
-                <p className="text-zinc-400 text-xs font-bold leading-relaxed">Envíos por correo certificado.</p>
-            </div>
-          </div>
-      </section>
-
-      {/* 5. FOOTER */}
-      <footer className="mt-40 pb-10 border-t border-zinc-100 pt-10 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.3em]">
-                Powered by Koda Maker • {new Date().getFullYear()}
-            </p>
-            <div className="flex gap-6">
-                <ShieldCheck size={20} className="text-zinc-200" />
-                <Clock size={20} className="text-zinc-200" />
-            </div>
-        </div>
+      <footer className="mt-40 pb-10 border-t border-zinc-100 pt-10 px-6 text-center">
+        <p className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.3em]">Powered by Koda Maker • {new Date().getFullYear()}</p>
       </footer>
     </div>
   )

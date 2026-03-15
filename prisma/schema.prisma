@@ -39,6 +39,7 @@ model User {
   id                 String    @id @default(cuid())
   email              String    @unique
   name               String?   // Nombre del emprendimiento
+  phone              String?   
   logoUrl            String?
   createdAt          DateTime  @default(now())
   
