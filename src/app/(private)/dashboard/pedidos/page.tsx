@@ -20,7 +20,8 @@ import {
   Info,
   DollarSign,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Globe
 } from "lucide-react"
 import { createOrder, deleteOrder, markAsDelivered } from "./actions"
 import { OrderTicket } from "@/components/OrderTicket"
@@ -195,12 +196,21 @@ export default async function OrdersPage({ searchParams }: PageProps) {
             <div key={order.id} className={`bg-white rounded-[45px] overflow-hidden border-2 transition-all ${isQuote ? 'border-dashed border-zinc-200 opacity-90' : isDelivered ? 'grayscale-[0.4] opacity-90 border-transparent shadow-md' : 'border-transparent shadow-2xl shadow-zinc-100'}`}>
               
               {/* STATUS BARRA SUPERIOR */}
-              <div className={`py-3 px-8 flex justify-between items-center ${isQuote ? 'bg-zinc-100 text-zinc-500' : isDelivered ? 'bg-zinc-800 text-white' : 'bg-green-500 text-white'}`}>
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{order.status}</span>
-                    <span suppressHydrationWarning className="text-[10px] opacity-60 font-bold tracking-widest">
-                        | #00{order.orderNumber} | {new Date(order.createdAt).toLocaleDateString()}
-                    </span>
+            {/* DENTRO DE LA TARJETA DEL PEDIDO */}
+            <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-zinc-50 rounded-[25px] flex flex-col items-center justify-center text-black border border-zinc-100 shadow-inner">
+                    {/* Mostramos el Nro de Pedido como un sello profesional */}
+                    <span className="text-[8px] font-black text-accent uppercase leading-none mb-1">Nro</span>
+                    <span className="text-xl font-black leading-none">0{order.orderNumber}</span>
+                </div>
+                <div>
+                    <h4 className="text-3xl font-black uppercase tracking-tighter leading-none text-black">{order.customerName}</h4>
+                    {/* Badge de origen */}
+                    {order.isFromStore && (
+                        <span className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-500 text-[8px] font-black px-2 py-0.5 rounded-full mt-2 uppercase tracking-widest border border-zinc-200">
+                            <Globe size={10} /> Pedido de la Tienda
+                        </span>
+                    )}
                 </div>
                 <form action={async () => { "use server"; await deleteOrder(order.id) }}>
                     <button className="hover:text-red-200 transition-colors p-1 active:scale-90"><Trash2 size={18} /></button>
