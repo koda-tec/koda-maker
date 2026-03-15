@@ -206,6 +206,11 @@ export async function updateOrder(orderId: string, formData: FormData) {
     const designDetails = formData.get("designDetails") as string
     const status = formData.get("status") as any
     const deliveryDateRaw = formData.get("deliveryDate") as string
+    
+    // NUEVOS CAMPOS DE LOGÍSTICA
+    const deliveryMethod = formData.get("deliveryMethod") as any
+    const shippingAddress = formData.get("shippingAddress") as string
+
     const files = formData.getAll("files") as File[]
 
     const order = await prisma.order.findUnique({
@@ -214,10 +219,11 @@ export async function updateOrder(orderId: string, formData: FormData) {
     })
     if (!order) return
 
-    const imageUrls = await uploadImages(files, user.id)
+    // Reutilizamos el helper de subida si hay fotos nuevas
+    const imageUrls = await uploadImages(formData.getAll("files") as File[], user.id)
 
     await prisma.$transaction(async (tx) => {
-        // Si cambia de presupuesto a confirmado ahora, restamos stock
+        // Lógica de Stock: Si cambia de presupuesto a confirmado ahora, restamos stock
         if (order.status === "PRESUPUESTADO" && status !== "PRESUPUESTADO") {
             for (const item of order.items) {
                 for (const m of item.template.materials) {
@@ -229,7 +235,12 @@ export async function updateOrder(orderId: string, formData: FormData) {
         await tx.order.update({
             where: { id: orderId },
             data: {
-                customerName, customerPhone, designDetails, status,
+                customerName,
+                customerPhone,
+                designDetails,
+                status,
+                deliveryMethod, // Se guarda el método (PICKUP, LOCAL, NATIONWIDE)
+                shippingAddress, // Se guarda la dirección
                 deliveryDate: deliveryDateRaw ? new Date(deliveryDateRaw) : null,
                 images: { create: imageUrls.map(url => ({ url })) }
             }
@@ -237,7 +248,7 @@ export async function updateOrder(orderId: string, formData: FormData) {
     })
 
     revalidatePath("/dashboard/pedidos")
-    revalidatePath("/dashboard/stock")
+    revalidatePath("/dashboard/logistica") // También refrescamos la hoja de ruta
 }
 
 /**
