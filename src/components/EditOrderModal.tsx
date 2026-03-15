@@ -75,7 +75,7 @@ export function EditOrderModal({ order }: { order: any }) {
                                     </p>
                                     <select name="deliveryMethod" defaultValue={order.deliveryMethod} className="w-full p-3 bg-white rounded-xl font-bold text-xs border-none outline-none shadow-sm">
                                         <option value="PICKUP">RETIRO POR TALLER</option>
-                                        <option value="LOCAL">ENVÍO LOCAL (MOTO)</option>
+                                        <option value="LOCAL">ENVÍO LOCAL</option>
                                         <option value="NATIONWIDE">ENVÍO NACIONAL (CORREO)</option>
                                     </select>
                                     <div className="space-y-1">
