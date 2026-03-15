@@ -64,7 +64,7 @@ export async function submitOrderRequest(formData: FormData, userId: string, tem
             items: {
                 create: {
                     templateId,
-                    quantity, // Aquí es donde debe ir la cantidad
+                    quantity, 
                     customPrice: template.basePrice
                 }
             },
