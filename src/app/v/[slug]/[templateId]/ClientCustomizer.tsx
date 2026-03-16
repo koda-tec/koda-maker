@@ -10,26 +10,28 @@ import {
   Send, 
   Clock, 
   CheckCircle2,
-  Info
+  Info,
+  Calendar
 } from "lucide-react"
 import { submitOrderRequest } from "../actions"
+import { toast } from "sonner"
 
 interface ClientCustomizerProps {
     storeUser: any
     template: any
     slug: string
+    maxAvailable: number // Nueva prop para el límite de stock
 }
 
-export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizerProps) {
+export function ClientCustomizer({ storeUser, template, slug, maxAvailable }: ClientCustomizerProps) {
     const [isPending, startTransition] = useTransition()
     
     // 1. ESTADOS PARA LA CALCULADORA Y DATOS
-    // Usamos string para la cantidad para permitir que el usuario borre el input totalmente al escribir
-    const [quantity, setQuantity] = useState<string>("1") 
+    // Inicializamos en 1 o en 0 si no hay stock
+    const [quantity, setQuantity] = useState<string>(maxAvailable > 0 ? "1" : "0") 
     const [deliveryMethod, setDeliveryMethod] = useState("PICKUP")
     
     // 2. ESTADO PARA LA GALERÍA DE IMÁGENES
-    // Iniciamos con la primera imagen de la galería o la de portada
     const [activeImage, setActiveImage] = useState(
         template.images && template.images.length > 0 
         ? template.images[0].url 
@@ -42,8 +44,16 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
     const totalToPay = (template.basePrice * qtyNum) + shippingCost
 
     const handleSubmit = async (formData: FormData) => {
+        if (maxAvailable <= 0) {
+            toast.error("Producto agotado", { description: "Lo sentimos, no tenemos insumos para fabricar este producto." })
+            return
+        }
         if (qtyNum <= 0) {
-            alert("Por favor, ingresá una cantidad válida.")
+            toast.error("Cantidad inválida", { description: "Por favor, ingresá al menos 1 unidad." })
+            return
+        }
+        if (qtyNum > maxAvailable) {
+            toast.error("Stock insuficiente", { description: `Solo podemos fabricar ${maxAvailable} unidades actualmente.` })
             return
         }
 
@@ -55,6 +65,7 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                 }
             } catch (error) {
                 console.error("Error al enviar pedido:", error)
+                toast.error("Error al enviar solicitud")
             }
         })
     }
@@ -73,13 +84,13 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                             alt={template.name} 
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-300 font-black uppercase text-xs tracking-widest">
+                        <div className="w-full h-full flex items-center justify-center text-zinc-300 font-black uppercase text-xs tracking-widest text-center p-10">
                             Sin imagen disponible
                         </div>
                     )}
                 </div>
 
-                {/* Galería de Miniaturas (Thumbnails) */}
+                {/* Galería de Miniaturas */}
                 {template.images && template.images.length > 1 && (
                     <div className="space-y-3">
                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-2 italic">
@@ -104,7 +115,7 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                     </div>
                 )}
 
-                {/* Título y Descripción del Producto */}
+                {/* Título y Descripción */}
                 <div className="px-4 space-y-6">
                     <div>
                         <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.85] text-black">
@@ -113,12 +124,12 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                         <div className="w-20 h-2 bg-accent mt-4 rounded-full" />
                     </div>
                     <p className="text-zinc-500 font-medium text-lg leading-relaxed italic border-l-4 border-zinc-100 pl-6">
-                        {template.publicDescription || "Este producto se fabrica a pedido con los mejores materiales y personalización exclusiva."}
+                        {template.publicDescription || "Diseño personalizado de alta calidad."}
                     </p>
                 </div>
             </div>
 
-            {/* COLUMNA DERECHA: FORMULARIO DE PEDIDO */}
+            {/* COLUMNA DERECHA: FORMULARIO */}
             <section className="bg-white p-8 md:p-12 rounded-[60px] shadow-2xl border border-zinc-100 relative overflow-hidden">
                 <form action={handleSubmit} encType="multipart/form-data" className="space-y-10 relative z-10">
                     
@@ -135,49 +146,65 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                     <div className="space-y-6">
                         <h3 className="font-black uppercase text-xs tracking-widest text-accent italic">2. Detalles del Pedido</h3>
                         
-                        <div className="grid grid-cols-1 gap-6">
-                            {/* Input de cantidad corregido */}
-                            <div className="space-y-2 text-left">
-                                <label className="text-[10px] font-black uppercase text-zinc-400 ml-2 tracking-widest">¿Cuántas unidades necesitás?</label>
+                        <div className="grid grid-cols-1 gap-6 text-left">
+                            {/* Input de cantidad con validación de Stock */}
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center px-2">
+                                    <label className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">¿Cuántas unidades necesitás?</label>
+                                    <span className={`text-[10px] font-black uppercase ${maxAvailable < 5 ? 'text-accent animate-pulse' : 'text-green-600'}`}>
+                                        {maxAvailable > 0 ? `${maxAvailable} disponibles` : 'Agotado'}
+                                    </span>
+                                </div>
                                 <input 
                                     name="quantity" 
                                     type="number" 
+                                    min="1"
+                                    max={maxAvailable}
                                     value={quantity} 
-                                    onChange={(e) => setQuantity(e.target.value)}
-                                    onBlur={() => {
-                                        if (!quantity || parseInt(quantity) < 1) setQuantity("1")
+                                    disabled={maxAvailable <= 0}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (val > maxAvailable) {
+                                            setQuantity(maxAvailable.toString());
+                                            toast.error("Límite de stock", { description: `Solo tenemos insumos para ${maxAvailable} unidades.` });
+                                        } else {
+                                            setQuantity(e.target.value);
+                                        }
                                     }}
-                                    className="w-full p-6 bg-zinc-50 rounded-[30px] font-black text-4xl outline-none focus:ring-2 focus:ring-accent transition-all text-black shadow-inner" 
+                                    onBlur={() => {
+                                        if (!quantity || parseInt(quantity) < 1) setQuantity(maxAvailable > 0 ? "1" : "0")
+                                    }}
+                                    className="w-full p-6 bg-zinc-50 rounded-[30px] font-black text-4xl outline-none focus:ring-2 focus:ring-accent transition-all text-black shadow-inner disabled:opacity-50" 
                                     required 
                                 />
                             </div>
 
-                            {/* Mensaje de Entrega */}
-                            <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 p-6 rounded-[35px] flex items-start gap-4">
+                            {/* Mensaje Entrega */}
+                            <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 p-6 rounded-[35px] flex items-start gap-4 shadow-inner">
                                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-accent shadow-sm shrink-0">
                                     <Clock size={24} />
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="font-black uppercase text-[10px] tracking-widest text-black">Fecha de Entrega</h4>
-                                    <p className="text-xs font-bold text-zinc-500 leading-snug">
-                                        La fecha final de entrega se coordinará por WhatsApp una vez que confirmemos la complejidad de tu diseño.
+                                    <p className="text-xs font-bold text-zinc-500 leading-snug italic">
+                                        Se coordinará por WhatsApp tras confirmar tu diseño.
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Notas y Archivos */}
+                        {/* Archivos */}
                         <div className="p-6 bg-zinc-50 rounded-[40px] space-y-4 border border-zinc-100 shadow-inner">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-white rounded-xl shadow-sm"><Upload size={16} className="text-accent" /></div>
-                                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Logo o imagen de referencia</label>
+                                <label className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Logo o referencia de diseño</label>
                             </div>
-                            <input name="files" type="file" multiple accept="image/*" className="w-full text-xs file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:bg-black file:text-white file:font-black cursor-pointer file:uppercase file:tracking-widest" />
+                            <input name="files" type="file" multiple accept="image/*" className="w-full text-xs file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:bg-black file:text-white file:font-black cursor-pointer file:uppercase" />
                             <textarea name="designDetails" placeholder="Contanos qué te gustaría grabar o imprimir..." className="w-full p-6 bg-white rounded-[30px] border-none outline-none text-sm font-bold h-32 resize-none shadow-sm focus:ring-2 focus:ring-accent text-black" required />
                         </div>
                     </div>
 
-                    {/* PASO 3: LOGÍSTICA */}
+                    {/* PASO 3: ENVÍO */}
                     <div className="space-y-4">
                         <h3 className="font-black uppercase text-xs tracking-widest text-accent italic">3. Método de Entrega</h3>
                         <div className="grid grid-cols-1 gap-3 text-left">
@@ -187,7 +214,7 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                             />
                             {storeUser.localShippingCost > 0 && (
                                 <ShippingOption 
-                                    id="LOCAL" icon={<Truck/>} label="Envío a Domicilio" desc={`Costo fijo: $${storeUser.localShippingCost.toLocaleString('es-AR')}`} 
+                                    id="LOCAL" icon={<Truck/>} label="Envío a Domicilio" desc={`$${storeUser.localShippingCost.toLocaleString('es-AR')}`} 
                                     isSelected={deliveryMethod === "LOCAL"} onClick={() => setDeliveryMethod("LOCAL")} 
                                 />
                             )}
@@ -198,7 +225,7 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                         </div>
                     </div>
 
-                    {/* CALCULADORA FINAL EN VIVO */}
+                    {/* CALCULADORA FINAL */}
                     <div className="pt-8 border-t border-zinc-100 space-y-6">
                         <div className="space-y-3 px-2">
                             <div className="flex justify-between text-[11px] font-black uppercase tracking-widest text-zinc-400">
@@ -219,26 +246,25 @@ export function ClientCustomizer({ storeUser, template, slug }: ClientCustomizer
                             </div>
                         </div>
 
-                        {/* BOTÓN DE ENVÍO */}
+                        {/* BOTÓN FINAL */}
                         <button 
                             type="submit" 
-                            disabled={isPending} 
-                            className="w-full p-7 bg-black text-white rounded-[35px] font-black uppercase text-xs tracking-[0.3em] shadow-2xl flex items-center justify-center gap-3 hover:bg-accent transition-all active:scale-95 disabled:opacity-50"
+                            disabled={isPending || maxAvailable <= 0} 
+                            className="w-full p-7 bg-black text-white rounded-[35px] font-black uppercase text-xs tracking-[0.3em] shadow-2xl flex items-center justify-center gap-3 hover:bg-accent transition-all active:scale-95 disabled:opacity-50 disabled:bg-zinc-200"
                         >
                             {isPending ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
-                            {isPending ? "PROCESANDO SOLICITUD..." : "Enviar Pedido a Fabricación"}
+                            {maxAvailable <= 0 ? "PRODUCTO SIN STOCK" : isPending ? "PROCESANDO..." : "Enviar Solicitud de Pedido"}
                         </button>
                     </div>
                 </form>
                 
-                {/* Decoración de fondo */}
+                {/* Decoración */}
                 <div className="absolute -right-20 -top-20 w-80 h-80 bg-accent/5 rounded-full blur-[120px] opacity-20 pointer-events-none" />
             </section>
         </div>
     )
 }
 
-// Sub-componente para las opciones de envío
 function ShippingOption({ id, icon, label, desc, isSelected, onClick }: any) {
     return (
         <label onClick={onClick} className={`flex items-center justify-between p-5 rounded-[30px] border-2 transition-all cursor-pointer group ${isSelected ? 'border-accent bg-red-50/30' : 'border-zinc-100 bg-zinc-50 hover:bg-white hover:border-zinc-200'}`}>
@@ -246,7 +272,7 @@ function ShippingOption({ id, icon, label, desc, isSelected, onClick }: any) {
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors shadow-sm ${isSelected ? 'bg-accent text-white shadow-red-200' : 'bg-white text-zinc-400'}`}>
                     {icon}
                 </div>
-                <div>
+                <div className="text-left">
                     <p className={`text-sm font-black uppercase tracking-tight leading-none ${isSelected ? 'text-accent' : 'text-black'}`}>{label}</p>
                     <p className="text-[9px] font-bold text-zinc-400 mt-1.5 uppercase tracking-widest">{desc}</p>
                 </div>
@@ -254,7 +280,6 @@ function ShippingOption({ id, icon, label, desc, isSelected, onClick }: any) {
             <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-accent bg-accent' : 'border-zinc-300'}`}>
                 {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
             </div>
-            {/* Input radio oculto para el FormData */}
             <input type="radio" name="deliveryMethod" value={id} className="hidden" readOnly checked={isSelected} />
         </label>
     )
