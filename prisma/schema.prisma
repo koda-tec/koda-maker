@@ -24,7 +24,7 @@ enum OrderStatus {
   LISTO
   ENTREGADO
   CANCELADO
-  RECHAZADO // Nuevo: Para que el dueño pueda cancelar pedidos de la web
+  RECHAZADO 
 }
 
 enum DeliveryMethod {

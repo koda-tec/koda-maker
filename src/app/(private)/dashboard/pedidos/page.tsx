@@ -21,8 +21,7 @@ import {
   DollarSign,
   ChevronRight,
   AlertCircle,
-  ArrowDownAz,
-  ListFilter
+  ArrowDownAz
 } from "lucide-react"
 import { createOrder, deleteOrder, markAsDelivered } from "./actions"
 import { OrderTicket } from "@/components/OrderTicket"
@@ -47,16 +46,17 @@ export default async function OrdersPage({ searchParams }: PageProps) {
   const authUser = userRes.data.user
   const statusFilter = query.status
   const searchQuery = query.search || ""
-  const sortParam = query.sort || "fecha_creacion" // fecha_creacion, nombre, entrega
+  const sortParam = query.sort || "newest"
 
-  // Lógica de búsqueda inteligente: Si es un número, busca por orderNumber
+  // Lógica de búsqueda inteligente
   const isNumericSearch = /^\d+$/.test(searchQuery);
   const orderNumberQuery = isNumericSearch ? parseInt(searchQuery) : undefined;
 
   // Lógica de Ordenamiento para Prisma
   let orderBy: any = { createdAt: "desc" };
-  if (sortParam === "nombre") orderBy = { customerName: "asc" };
-  if (sortParam === "entrega") {
+  if (sortParam === "name") orderBy = { customerName: "asc" };
+  if (sortParam === "delivery") {
+    // Ordenamos por fecha de entrega (más próximos primero) y los nulls al final
     orderBy = [
       { deliveryDate: { sort: 'asc', nulls: 'last' } },
       { createdAt: 'desc' }
@@ -71,10 +71,11 @@ export default async function OrdersPage({ searchParams }: PageProps) {
         AND: [
             statusFilter 
               ? { status: statusFilter as any } 
-              : { status: { in: ['CONFIRMADO', 'EN_PROCESO'] } },
+              : { status: { in: ['CONFIRMADO', 'EN_PROCESO'] } }, // Filtro Activos por defecto
             {
                 OR: [
                     { customerName: { contains: searchQuery, mode: 'insensitive' } },
+                    // NUEVO: Filtro por nombre del producto
                     { items: { some: { template: { name: { contains: searchQuery, mode: 'insensitive' } } } } },
                     orderNumberQuery ? { orderNumber: orderNumberQuery } : {},
                 ]
@@ -120,18 +121,18 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                     />
                 </form>
                 
-                {/* Selector de Ordenamiento */}
-                <div className="flex gap-1 bg-zinc-100 p-1 rounded-2xl">
+                {/* Selector de Ordenamiento Visual */}
+                <div className="flex gap-1 bg-zinc-100 p-1 rounded-2xl self-start">
                     <a 
-                        href={`?sort=nombre${statusFilter ? `&status=${statusFilter}` : ''}${searchQuery ? `&search=${searchQuery}` : ''}`}
-                        className={`p-2 rounded-xl transition-all ${sortParam === 'nombre' ? 'bg-white text-black shadow-sm' : 'text-zinc-400 hover:text-zinc-600'}`}
+                        href={`?sort=name${statusFilter ? `&status=${statusFilter}` : ''}${searchQuery ? `&search=${searchQuery}` : ''}`}
+                        className={`p-2 rounded-xl transition-all ${sortParam === 'name' ? 'bg-white text-black shadow-sm' : 'text-zinc-400 hover:text-zinc-600'}`}
                         title="Ordenar A-Z"
                     >
                         <ArrowDownAz size={20} />
                     </a>
                     <a 
-                        href={`?sort=entrega${statusFilter ? `&status=${statusFilter}` : ''}${searchQuery ? `&search=${searchQuery}` : ''}`}
-                        className={`p-2 rounded-xl transition-all ${sortParam === 'entrega' ? 'bg-white text-black shadow-sm' : 'text-zinc-400 hover:text-zinc-600'}`}
+                        href={`?sort=delivery${statusFilter ? `&status=${statusFilter}` : ''}${searchQuery ? `&search=${searchQuery}` : ''}`}
+                        className={`p-2 rounded-xl transition-all ${sortParam === 'delivery' ? 'bg-white text-black shadow-sm' : 'text-zinc-400 hover:text-zinc-600'}`}
                         title="Ordenar por Entrega"
                     >
                         <Clock size={20} />
@@ -144,9 +145,9 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 <a href="/dashboard/pedidos" className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${!statusFilter ? 'bg-black text-white shadow-lg border-black' : 'bg-white text-zinc-400 border-zinc-100'}`}>Activos</a>
                 <a href="?status=PRESUPUESTADO" className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap ${statusFilter === 'PRESUPUESTADO' ? 'bg-black text-white shadow-lg border-black' : 'bg-white text-zinc-400 border-zinc-100'}`}>Presupuestos</a>
                 
-                {/* NUEVO BOTÓN: LISTOS PARA ENTREGAR */}
-                <a href="?status=FINALIZADO" className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${statusFilter === 'FINALIZADO' ? 'bg-emerald-500 text-white shadow-lg border-emerald-500' : 'bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-50'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full bg-current ${statusFilter === 'FINALIZADO' ? 'animate-pulse' : ''}`} />
+                {/* BOTÓN LISTOS (Estado LISTO en tu DB) */}
+                <a href="?status=LISTO" className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all whitespace-nowrap flex items-center gap-2 ${statusFilter === 'LISTO' ? 'bg-emerald-500 text-white shadow-lg border-emerald-500' : 'bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-50'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full bg-current ${statusFilter === 'LISTO' ? 'animate-pulse' : ''}`} />
                     Listos
                 </a>
 
@@ -163,58 +164,59 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 <h3 className="font-black uppercase text-xs tracking-widest text-zinc-800">Nueva Operación</h3>
             </div>
 
-            <form action={createOrder} encType="multipart/form-data" className="space-y-6 text-left">
+            <form action={createOrder} encType="multipart/form-data" className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                     <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2">Nombre del Cliente</label>
+                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 text-left block">Nombre del Cliente</label>
                         <input name="customerName" placeholder="Juan Pérez" className="w-full p-4 bg-zinc-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-accent text-sm font-bold text-black" required />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2">WhatsApp</label>
+                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 text-left block">WhatsApp</label>
                         <input name="customerPhone" placeholder="11 2233 4455" className="w-full p-4 bg-zinc-50 border-none rounded-2xl outline-none focus:ring-2 focus:ring-accent text-sm font-bold text-black" />
                     </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="md:col-span-2 space-y-1 text-left">
-                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2">Producto</label>
+                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 text-left block">Producto</label>
                         <select name="templateId" className="w-full p-4 bg-zinc-50 rounded-2xl text-sm font-black border-none appearance-none cursor-pointer text-black" required>
                             <option value="">Seleccionar del catálogo...</option>
                             {templates.map(t => <option key={t.id} value={t.id}>{t.name} (${t.basePrice})</option>)}
                         </select>
                     </div>
-                    <div className="space-y-1 text-left">
-                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2">Cantidad</label>
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 text-center block w-full">Cantidad</label>
                         <input name="quantity" type="number" defaultValue="1" min="1" className="w-full p-4 bg-zinc-50 rounded-2xl text-sm font-black text-center border-none text-black" required />
                     </div>
                 </div>
 
                 <div className="space-y-1 text-left">
-                    <label className="text-[9px] font-black uppercase text-zinc-400 ml-2">Detalles del Diseño / Grabado</label>
+                    <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 text-left block">Detalles del Diseño / Grabado</label>
                     <textarea name="designDetails" placeholder="Ej: Logo empresa en frente, nombre atrás..." className="w-full p-4 bg-zinc-50 border-none rounded-2xl outline-none text-sm font-medium h-24 resize-none text-black" />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                     <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 italic tracking-widest">Referencias Visuales</label>
+                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 italic tracking-widest text-left block">Referencias Visuales</label>
                         <input name="files" type="file" accept="image/*" multiple className="w-full p-3 bg-zinc-50 rounded-2xl text-[10px] file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:bg-black file:text-white cursor-pointer" />
                     </div>
-                    <div className="space-y-1 text-left">
-                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 italic tracking-widest">Fecha Entrega (Opcional)</label>
+                    <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 italic tracking-widest text-left block">Fecha Entrega (Opcional)</label>
                         <input name="deliveryDate" type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-black border-none h-14 text-black" />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
                     <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-accent ml-2 italic tracking-widest">Seña Recibida ($)</label>
+                        <label className="text-[9px] font-black uppercase text-accent ml-2 italic tracking-widest text-left block">Seña Recibida ($)</label>
                         <input name="deposit" type="number" step="0.01" placeholder="0.00" className="w-full p-4 bg-red-50 text-accent rounded-2xl font-black border-none outline-none focus:ring-2 focus:ring-accent h-14" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 tracking-widest">Estado Inicial</label>
+                        <label className="text-[9px] font-black uppercase text-zinc-400 ml-2 tracking-widest text-left block">Estado Inicial</label>
                         <select name="status" className="w-full p-4 bg-zinc-50 rounded-2xl text-sm font-black border-none outline-none focus:ring-2 focus:ring-accent h-14 cursor-pointer text-accent">
                             <option value="CONFIRMADO">✓ CONFIRMADO</option>
                             <option value="PRESUPUESTADO">? PRESUPUESTO</option>
+                            <option value="LISTO">✨ LISTO</option>
                         </select>
                     </div>
                 </div>
@@ -240,7 +242,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
               {/* STATUS BARRA SUPERIOR */}
               <div className={`py-3 px-8 flex justify-between items-center ${isQuote ? 'bg-zinc-100 text-zinc-500' : isReady ? 'bg-emerald-500 text-white' : isDelivered ? 'bg-zinc-800 text-white' : 'bg-green-500 text-white'}`}>
                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isReady ? "✨ Listo para entregar" : order.status}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{isReady ? '✨ LISTO PARA ENTREGAR' : order.status}</span>
                     <span suppressHydrationWarning className="text-[10px] opacity-60 font-bold tracking-widest">
                         | #00{order.orderNumber} | {new Date(order.createdAt).toLocaleDateString()}
                     </span>
@@ -253,7 +255,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
               <div className="p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-12 text-left">
                 
                 {/* COLUMNA IZQUIERDA: CLIENTE Y TALLER */}
-                <div className="space-y-8">
+                <div className="space-y-8 text-left">
                     <div className="flex items-center gap-5">
                         <div className="w-16 h-16 bg-zinc-50 rounded-[25px] flex items-center justify-center text-black border border-zinc-100 shadow-inner"><User size={30} /></div>
                         <div>
@@ -263,7 +265,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                                 </h4>
                                 {order.isFromStore && (
                                     <span className="bg-accent text-white text-[7px] font-black px-2 py-0.5 rounded-full uppercase tracking-[0.2em] animate-pulse">
-                                        🛒 Web
+                                        🛒 Web Store
                                     </span>
                                 )}
                             </div>
@@ -273,12 +275,12 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         </div>
                     </div>
 
-                    <div className="bg-black text-white p-6 rounded-[35px] flex items-center justify-between shadow-xl">
-                        <div className="flex items-center gap-4">
+                    <div className="bg-black text-white p-6 rounded-[35px] flex items-center justify-between shadow-xl text-left">
+                        <div className="flex items-center gap-4 text-left">
                             <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center"><PackageOpen size={24} className="text-accent" /></div>
                             <div>
                                 <p className="text-[10px] font-black uppercase text-zinc-500 tracking-widest leading-none mb-1">Item pedido</p>
-                                <h5 className="text-xl font-black uppercase tracking-tighter leading-none truncate max-w-35 md:max-w-none">{product?.name || "Producto"}</h5>
+                                <h5 className="text-xl font-black uppercase tracking-tighter leading-none truncate max-w-50 md:max-w-none">{product?.name || "Producto"}</h5>
                             </div>
                         </div>
                         <div className="text-right">
@@ -287,14 +289,14 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         </div>
                     </div>
 
-                    <div className="bg-zinc-50 p-6 rounded-[35px] border border-zinc-100 italic font-bold text-zinc-600 relative">
+                    <div className="bg-zinc-50 p-6 rounded-[35px] border border-zinc-100 italic font-bold text-zinc-600 relative text-left">
                         <p className="text-[10px] font-black uppercase text-zinc-400 mb-2 tracking-widest italic underline decoration-accent decoration-2"><Paintbrush size={14} className="inline mr-2" />Hoja de Taller</p>
                         "{order.designDetails || "Sin instrucciones específicas de grabado."}"
                     </div>
                 </div>
 
                 {/* COLUMNA DERECHA: IMÁGENES Y FINANZAS */}
-                <div className="flex flex-col justify-between space-y-10">
+                <div className="flex flex-col justify-between space-y-10 text-left">
                     
                     {/* GALERÍA DE IMÁGENES */}
                     <div className="relative">
@@ -310,7 +312,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                                         </div>
                                     ))}
                                 </div>
-                                <p className="text-[9px] font-black text-center text-zinc-400 uppercase tracking-widest italic">Fotos adjuntas ({order.images.length})</p>
+                                <p className="text-[9px] font-black text-center text-zinc-400 uppercase tracking-widest italic">Fotos del pedido ({order.images.length})</p>
                             </div>
                         ) : (
                             <div className="h-64 rounded-[40px] bg-zinc-50 border-2 border-dashed border-zinc-200 flex flex-col items-center justify-center text-zinc-300">
@@ -327,8 +329,8 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none mb-2">Fecha Entrega</p>
                                 <div className="flex items-center gap-2">
                                     <Calendar size={18} className="text-accent" />
-                                    <p suppressHydrationWarning className={`text-xl font-black uppercase italic ${!order.deliveryDate ? 'text-zinc-200' : 'text-black'}`}>
-                                        {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('es-AR', {day:'2-digit', month:'short'}) : "S/D"}
+                                    <p suppressHydrationWarning className={`text-xl font-black uppercase italic ${order.deliveryDate ? 'text-black' : 'text-zinc-200'}`}>
+                                        {order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('es-AR', {day:'2-digit', month:'short'}) : "Sin definir"}
                                     </p>
                                 </div>
                             </div>
@@ -341,9 +343,9 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         </div>
 
                         {/* ESTADO FINANCIERO */}
-                        <div className="space-y-4 bg-zinc-50/50 p-4 rounded-[30px] border border-zinc-50">
+                        <div className="space-y-4 bg-zinc-50/50 p-4 rounded-[30px] border border-zinc-50 text-left">
                             <div className="flex justify-between items-end px-1 gap-2">
-                                <span className="text-[10px] font-black uppercase text-zinc-400">Estado de pago</span>
+                                <span className="text-[10px] font-black uppercase text-zinc-400 text-left">Estado de pago</span>
                                 {remaining > 0 && !isDelivered && (
                                     <AddPaymentModal orderId={order.id} remaining={remaining} />
                                 )}
@@ -369,7 +371,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                         <div className="bg-zinc-50 p-4 rounded-[30px] flex flex-col gap-2">
                             {isReady ? (
                                 <form action={async () => { "use server"; await markAsDelivered(order.id) }} className="w-full">
-                                    <button className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-[11px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-emerald-100 animate-in fade-in zoom-in duration-500">
+                                    <button className="w-full py-4 bg-emerald-500 text-white rounded-[25px] font-black text-[11px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-emerald-100 animate-in fade-in zoom-in duration-500">
                                         <Truck size={18}/> ¡Entregar a Cliente!
                                     </button>
                                 </form>
@@ -377,31 +379,29 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                                 <ConfirmOrderModal orderId={order.id} />
                             ) : !isDelivered ? (
                                 <div className="text-center py-2 text-[10px] font-black text-zinc-400 uppercase italic flex items-center justify-center gap-2">
-                                    <Clock size={12} /> Trabajo en Producción
+                                    <Clock size={14}/> En proceso de fabricación
                                 </div>
                             ) : (
-                                <div className="text-center py-2 text-xs font-black text-green-600 uppercase flex items-center justify-center gap-2 italic">
-                                    <Check size={16} /> Trabajo Entregado
-                                </div>
+                                <div className="text-center py-2 text-xs font-black text-green-600 uppercase flex items-center justify-center gap-2 italic">✓ Trabajo Entregado</div>
                             )}
                         </div>
                         
-                        <div className="flex gap-2">
-                            <OrderTicket 
-                                order={order} 
-                                businessName={dbUser?.name || "Koda Maker"} 
-                                logoUrl={dbUser?.logoUrl} 
-                            />
-                            <EditOrderModal order={order} />
+                        <div className="flex gap-2 w-full">
+                            <div className="flex-1">
+                                <OrderTicket order={order} businessName={dbUser?.name || "Koda Maker"} logoUrl={dbUser?.logoUrl} />
+                            </div>
+                            <div className="flex-1">
+                                <EditOrderModal order={order} />
+                            </div>
                         </div>
                         
-                        <div className="flex justify-between items-center px-4 mt-2">
+                        <div className="text-center mt-2">
                             <a 
                                 href={`https://wa.me/${order.customerPhone?.replace(/\D/g, '')}`} 
                                 target="_blank" 
-                                className="flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase hover:text-black transition-all"
+                                className="inline-flex items-center gap-2 text-[10px] font-black text-zinc-400 uppercase hover:text-black transition-all"
                             >
-                                <MessageSquare size={14} /> WhatsApp
+                                <MessageSquare size={14} /> WhatsApp Cliente
                             </a>
                         </div>
                     </div>
@@ -415,7 +415,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
         {orders.length === 0 && (
           <div className="text-center py-24 bg-zinc-50 rounded-[60px] border-2 border-dashed border-zinc-200 mx-4 md:mx-0">
              <ShoppingCart className="text-zinc-200 mx-auto mb-4 opacity-50" size={64} />
-             <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs italic">No hay pedidos registrados con estos filtros</p>
+             <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs italic text-center w-full">No se encontraron pedidos con estos filtros</p>
           </div>
         )}
       </div>
